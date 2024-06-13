@@ -41,7 +41,7 @@ let api = function Binance( options = {} ) {
     const contentType = 'application/x-www-form-urlencoded';
     Binance.subscriptions = {};
     Binance.futuresSubscriptions = {};
-    Binance.futuresInfo = {};
+    // Binance.futuresInfo = {};
     Binance.futuresMeta = {};
     Binance.futuresTicks = {};
     Binance.futuresRealtime = {};
@@ -84,6 +84,10 @@ let api = function Binance( options = {} ) {
         orderCount1h: 0,
         orderCount1d: 0,
         timeOffset: 0
+    };
+    Binance.futuresInfo = {
+        usedWeight: 0,
+        orderCount: 0
     };
     Binance.socketHeartbeatInterval = null;
     if ( options ) setOptions( options );
@@ -564,7 +568,11 @@ let api = function Binance( options = {} ) {
                             Binance.info.statusCode = response.statusCode || 0;
                             if ( response.request ) Binance.info.lastURL = response.request.uri.href;
                             if ( response.headers ) {
-                                Binance.info.usedWeight = response.headers['x-mbx-used-weight-1m'] || 0;
+                                Binance.futuresInfo.usedWeight = response.headers['x-mbx-used-weight-1m'] || 0;
+                                if (response.headers['x-mbx-order-count-1m'] !== undefined) {
+                                    Binance.futuresInfo.orderCount = response.headers['x-mbx-order-count-1m'];
+                                    // never see other x-mbx-order-count-* than 1m...
+                                }
                                 Binance.info.futuresLatency = response.headers['x-response-time'] || 0;
                             }
                         }
@@ -2818,7 +2826,19 @@ let api = function Binance( options = {} ) {
         * Returns the ping time from the last futures request
         * @return {object} - latency/ping (2ms)
         */
-        futuresLatency: () => Binance.info.futuresLatency,
+        futuresLatency: () => Binance.info.futuresLatency, // Binance.futuresInfo.latency
+
+        /**
+        * Returns the used weight from the last futures request
+        * @return {object} - 1m weight used
+        */
+        futuresUsedWeight: () => Binance.futuresInfo.usedWeight,
+
+        /**
+        * Returns the order count from the last futures request
+        * @return {object} - orders allowed per 1m
+        */
+        futuresOrderCount: () => Binance.futuresInfo.orderCount,
 
         /**
         * Returns the complete URL from the last request
