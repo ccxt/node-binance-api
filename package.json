@@ -1,27 +1,29 @@
 {
   "name": "node-binance-api",
-  "version": "0.13.1",
+  "version": "0.13.4",
   "description": "Binance API for node https://github.com/jaggedsoft/node-binance-api",
   "main": "node-binance-api.js",
   "typings": "node-binance-api.d.ts",
   "dependencies": {
     "async": "^3.1.0",
     "https-proxy-agent": "^3.0.1",
-    "request": "^2.88.0",
-    "socks-proxy-agent": "^4.0.2",
-    "string-hash": "^1.1.3",
     "json-bigint": "^1.0.0",
+    "request": "^2.88.0",
+    "socks-proxy-agent": "^8.0.5",
+    "string-hash": "^1.1.3",
     "url": "^0.11.0",
     "ws": "^7.2.0"
   },
   "scripts": {
-    "test": "mocha",
+    "test": "mocha ./tests/live-tests.js",
+    "static-test": "mocha ./tests/static-tests.mjs",
     "test-debug": "mocha --inspect-brk",
     "lint": "eslint -c .eslintrc.js node-binance-api.js test.js",
     "cover": "istanbul cover _mocha --report lcovonly",
     "coveralls": "cat ./coverage/lcov.info | coveralls",
     "codacy": "cat ./coverage/lcov.info | codacy-coverage -v",
-    "codecov": "codecov"
+    "codecov": "codecov",
+    "publishPackage": "sh publish.sh && git push && git push --tags && npm publish"
   },
   "repository": {
     "type": "git",
@@ -38,16 +40,19 @@
   },
   "homepage": "https://github.com/jaggedsoft/node-binance-api#readme",
   "devDependencies": {
-    "chai": "^4.2.0",
+    "@types/chai": "^5.0.1",
+    "@types/mocha": "^10.0.10",
+    "chai": "^4.5.0",
     "chai-counter": "^1.0.0",
-    "codacy-coverage": "^3.4.0",
+    "codacy-coverage": "^2.0.3",
     "codecov": "^3.6.1",
     "coveralls": "^3.0.7",
     "eslint": "^6.6.0",
     "istanbul": "^0.4.5",
-    "jsdoc": "^3.6.3",
-    "mocha": "^6.2.2",
+    "jsdoc": "^4.0.4",
+    "mocha": "^11.1.0",
     "mocha-lcov-reporter": "^1.3.0",
-    "nyc": "^14.1.1"
+    "nock": "^14.0.1",
+    "nyc": "^17.1.0"
   }
 }
