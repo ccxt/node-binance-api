@@ -1,5 +1,7 @@
-[![Binance Community API](https://cdn.discordapp.com/attachments/569865969120575519/718166995354255370/binance-api-black.png)](https://dev.binance.vision/)
-[![Yearly Downloads](https://badgen.net/npm/dy/node-binance-api?labelColor=29B6F6&color=3D5AFE&scale=2&label=Downloads&icon=bitcoin-lightning&cache=2400)](https://npm-stat.com/charts.html?package=node-binance-api&from=2017-07-01&to=2020-07-01) ![Last Commit](https://badgen.net/github/last-commit/jaggedsoft/node-binance-api?scale=2&label=🟣%20Updated&labelColor=black&color=448AFF&cache=9999)
+
+<!-- [![Binance Community API](https://cdn.discordapp.com/attachments/569865969120575519/718166995354255370/binance-api-black.png)](https://dev.binance.vision/) -->
+
+<!-- ![Last Commit](https://badgen.net/github/last-commit/jaggedsoft/node-binance-api?scale=2&label=🟣%20Updated&labelColor=black&color=448AFF&cache=9999) -->
 <!-- [![npm downloads](https://img.shields.io/npm/dt/node-binance-api.svg?maxAge=7200)](https://www.npmjs.com/package/node-binance-api) [![Build Status](https://travis-ci.org/jaggedsoft/node-binance-api.svg?branch=master&style=flat-square)](https://travis-ci.org/jaggedsoft/node-binance-api) [![Coverage Status](https://coveralls.io/repos/github/jaggedsoft/node-binance-api/badge.svg?branch=master&style=flat-square)](https://coveralls.io/github/jaggedsoft/node-binance-api) [![CodeCov](https://codecov.io/gh/jaggedsoft/node-binance-api/branch/master/graph/badge.svg?style=flat-square)](https://codecov.io/github/jaggedsoft/node-binance-api/) [![Codacy Badge](https://api.codacy.com/project/badge/Coverage/996757cec66542c0a64fca2b4cf8a936)](https://www.codacy.com/app/jaggedsoft/node-binance-api?utm_source=github.com&utm_medium=referral&utm_content=jaggedsoft/node-binance-api&utm_campaign=Badge_Coverage) [![Codacy Grade](https://api.codacy.com/project/badge/Grade/996757cec66542c0a64fca2b4cf8a936)](https://www.codacy.com/app/jaggedsoft/node-binance-api) https://img.shields.io/npm/dm/node-binance-api.svg?labelColor=blueviolet)
 https://badgen.net/npm/dm/node-binance-api?labelColor=7C4DFF&color=green&scale=2&label=Downloads&icon=bitcoin
 🟣 Used by 727 https://badgen.net/github/dependents-repo/jaggedsoft/node-binance-api?labelColor=blue&color=purple&label=Used%20by&icon=github
@@ -9,15 +11,22 @@ https://badgen.net/npm/dm/node-binance-api?labelColor=7C4DFF&color=green&scale=2
 ✅ship Commits 568 https://badgen.net/github/commits/micromatch/micromatch?label=%E2%9C%A8Commits&labelColor=black&color=red
 ⚡ Updated about 16 hours ago https://badgen.net/github/last-commit/jaggedsoft/node-binance-api?scale=2&icon=bitcoin-lightning&label=Updated&labelColor=black&color=448AFF
 👀👁 Watchers 48 https://badgen.net/github/watchers/jaggedsoft/node-binance-api
-color=blueviolet 🔵
+color=blueviolet 🔵q
 -->
-[![Latest Version](https://img.shields.io/github/release/jaggedsoft/node-binance-api.svg?style=flat-square&labelColor=blueviolet&label=release)](https://github.com/jaggedsoft/node-binance-api/releases) [![GitHub last commit](https://img.shields.io/github/last-commit/jaggedsoft/node-binance-api.svg?maxAge=2400&labelColor=333&label=🟣%20updated)](#) [![Monthly Downloads](https://img.shields.io/npm/dm/node-binance-api.svg?labelColor=29B6F6&color=3D5AFE&label=downloads&logo=bitcoin-lightning)](https://npm-stat.com/charts.html?package=node-binance-api&from=2017-07-01&to=2020-07-01) 
-[![jaggedsoft on Twitter](https://img.shields.io/twitter/follow/jaggedsoft.svg?style=social)](https://twitter.com/jaggedsoft)
+<!-- [![Latest Version](https://img.shields.io/github/release/jaggedsoft/node-binance-api.svg?style=flat-square&labelColor=blueviolet&label=release)](https://github.com/jaggedsoft/node-binance-api/releases) [![GitHub last commit](https://img.shields.io/github/last-commit/jaggedsoft/node-binance-api.svg?maxAge=2400&labelColor=333&label=🟣%20updated)](#) [![Monthly Downloads](https://img.shields.io/npm/dm/node-binance-api.svg?labelColor=29B6F6&color=3D5AFE&label=downloads&logo=bitcoin-lightning)](https://npm-stat.com/charts.html?package=node-binance-api&from=2017-07-01&to=2020-07-01)  -->
 
-[![NPM](https://nodei.co/npm/node-binance-api.png?compact=true)](https://npmjs.org/package/node-binance-api)
+
+
+
+
 
 # Node Binance API
+
+[![telegram](https://patrolavia.github.io/telegram-badge/chat.png)](https://t.me/nodebinanceapi) [![Yearly Downloads](https://img.shields.io/npm/dy/node-binance-api.svg)](https://www.npmjs.com/package/node-binance-api)  [![jaggedsoft on X](https://img.shields.io/twitter/follow/jaggedsoft.svg?style=social)](https://x.com/jaggedsoft)
+
 This project is designed to help you make your own projects that interact with the [Binance API](https://github.com/binance-exchange/binance-official-api-docs). You can stream candlestick chart data, market depth, or use other advanced features such as setting stop losses and iceberg orders. This project seeks to have complete API coverage including WebSockets.
+
+
 
 <b><p align="center">
   <a href="#binance-futures-api" style="color:#f9c513">Futures API</a> &amp;
@@ -32,15 +41,39 @@ This project is designed to help you make your own projects that interact with t
   <a href="https://t.me/binance_api_english">Support</a>
 </p></b>
 
-#### Installation: **`npm install -s node-binance-api`**
-[![npm install node-binance-api](https://nodei.co/npm/node-binance-api.png?mini=true)](https://npmjs.org/package/node-binance-api)
+#### Installation
 
-#### Getting started
+```
+npm install -s node-binance-api
+```
+[![NPM](https://nodei.co/npm/node-binance-api.png?compact=true)](https://npmjs.org/package/node-binance-api)
+<!-- [![npm install node-binance-api](https://nodei.co/npm/node-binance-api.png?mini=true)](https://npmjs.org/package/node-binance-api) -->
+
+#### Community Telegram Chat
+
+https://t.me/nodebinanceapi
+
+
+**This project is powered by** <a href="https://github.com/ccxt/ccxt"><img src="https://avatars.githubusercontent.com/u/31901609" width=4% height=4%></a>
+
+
+#### Getting started (ESM)
+```javascript
+import Binance from 'node-binance-api';
+async function run() {
+    const exchange = new Binance();
+    const res = await exchange.futuresTime();
+    console.log( res );
+}
+```
+
+#### Getting started (CJS)
 ```javascript
 const Binance = require('node-binance-api');
 const binance = new Binance().options({
   APIKEY: '<key>',
-  APISECRET: '<secret>'
+  APISECRET: '<secret>',
+  test: true, // if you want to use the sandbox/testnet
 });
 ```
 
@@ -1856,7 +1889,7 @@ binance.withdraw("XMR", address, amount, addressTag);
 binance.withdraw("BTC", "1C5gqLRs96Xq4V2ZZAR1347yUCpHie7sa", 0.2);
 ```
 
-### Univeral Transfer / Internal Wallet Transfer
+### Universal Transfer / Internal Wallet Transfer
 Example Spot account transfer to USDⓈ-M Futures account , use ENUM -> "MAIN_UMFUTURE"
 ```js
 console.info( await binance.universalTransfer("MAIN_UMFUTURE","USDT",10) );
@@ -2075,8 +2108,14 @@ You can enable verbose mode to help with debugging WebSocket streams:
 binance.setOption( 'verbose', true );
 ```
 
-> ### For support go to [Telegram](https://t.me/binance_api_english) or [Binance Developers](https://dev.binance.vision/)
----
+### Sponsors
+
+
+[![Vitality](https://github.com/user-attachments/assets/0981aae2-3e12-4b57-8d2f-c5ae2b3b8b1c)](https://vitalitycrypto.com/)
+
+## Star History
+
+[![Star History Chart](https://api.star-history.com/svg?repos=jaggedsoft/node-binance-api&type=Timeline)](https://star-history.com/#jaggedsoft/node-binance-api&Timeline)
 
 ## Contribution
 - Give us a star :star:
@@ -2084,6 +2123,4 @@ binance.setOption( 'verbose', true );
 - Select existing [issues](https://github.com/jaggedsoft/node-binance-api/issues) or create a [new issue](https://github.com/jaggedsoft/node-binance-api/issues/new) and give us a PR with your bugfix or improvement after. We love it ❤️
 
 ![Downloads](https://img.shields.io/npm/dt/node-binance-api.svg?style=for-the-badge&maxAge=86400) ![Stars](https://img.shields.io/github/stars/jaggedsoft/node-binance-api.svg?style=for-the-badge&label=Stars) ![Contributors](https://img.shields.io/github/contributors/jaggedsoft/node-binance-api.svg?style=for-the-badge&maxAge=86400)
-[![Stargazers over time](https://starcharts.herokuapp.com/jaggedsoft/node-binance-api.svg)](https://starcharts.herokuapp.com/jaggedsoft/node-binance-api)
-[![Views](http://hits.dwyl.io/jaggedsoft/node-binance-api.svg)](http://hits.dwyl.io/jaggedsoft/node-binance-api)
-[![jaggedsoft on Twitter](https://img.shields.io/twitter/follow/jaggedsoft.svg?style=social)](https://twitter.com/jaggedsoft)
+[![jaggedsoft on X](https://img.shields.io/twitter/follow/jaggedsoft.svg?style=social)](https://x.com/jaggedsoft)
