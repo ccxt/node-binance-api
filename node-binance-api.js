@@ -4221,6 +4221,10 @@ let api = function Binance( options = {} ) {
             let params = { batchOrders: JSON.stringify( orders ) };
             return promiseRequest( 'v1/batchOrders', params, { base:fapi, type:'TRADE', method:'POST' } );
         },
+	    
+	futuresCancelMultipleOrders: async ( params = {} ) => {
+            return promiseRequest( 'v1/batchOrders', params, { base:fapi, type:'SIGNED', method:'DELETE'} );
+        },
 
         futuresOrder, // side symbol quantity [price] [params]
 
