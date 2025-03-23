@@ -2156,7 +2156,9 @@ let api = function Binance( options = {} ) {
    */
     const userDeliveryDataHandler = ( data ) => {
         let type = data.e;
-        if ( type === "MARGIN_CALL" ) {
+	if ( type === "listenKeyExpired" ) {
+	    console.log("User data stream listen key expired");
+    	} else if ( type === "MARGIN_CALL" ) {
             Binance.options.delivery_margin_call_callback(
                 fUserDataMarginConvertData( data )
             );
