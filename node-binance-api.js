@@ -5635,20 +5635,21 @@ let api = function Binance( options = {} ) {
              * @param {function} callback - callback function
              * @return {string} the websocket endpoint
              */
-            depth: function depth ( symbols, callback ) {
+            depth: function depth ( symbols, callback, opt = {} ) {
                 let reconnect = () => {
-                    if ( Binance.options.reconnect ) depth( symbols, callback );
+                    if ( Binance.options.reconnect ) depth( symbols, callback, opt );
                 };
                 let subscription;
+                let updateSpeed = (opt.updateSpeed || '100ms');
                 if ( Array.isArray( symbols ) ) {
                     if ( !isArrayUnique( symbols ) ) throw Error( 'depth: "symbols" cannot contain duplicate elements.' );
                     let streams = symbols.map( function ( symbol ) {
-                        return symbol.toLowerCase() + '@depth@100ms';
+                        return symbol.toLowerCase() + `@depth@${updateSpeed}`;
                     } );
                     subscription = subscribeCombined( streams, callback, reconnect );
                 } else {
                     let symbol = symbols;
-                    subscription = subscribe( symbol.toLowerCase() + '@depth@100ms', callback, reconnect );
+                    subscription = subscribe( symbol.toLowerCase() + `@depth@${updateSpeed}`, callback, reconnect );
                 }
                 return subscription.endpoint;
             },
