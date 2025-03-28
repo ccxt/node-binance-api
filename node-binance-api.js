@@ -561,7 +561,8 @@ let api = function Binance( options = {} ) {
             if ( typeof flags.method === 'undefined' ) flags.method = 'GET'; // GET POST PUT DELETE
             if ( typeof flags.type === 'undefined' ) flags.type = false; // TRADE, SIGNED, MARKET_DATA, USER_DATA, USER_STREAM
             else {
-                if ( typeof data.recvWindow === 'undefined' ) data.recvWindow = Binance.options.recvWindow;
+                if(flags.type !== 'USER_STREAM')
+                    if ( typeof data.recvWindow === 'undefined' ) data.recvWindow = Binance.options.recvWindow;
                 requireApiKey( 'promiseRequest' );
                 headers['X-MBX-APIKEY'] = Binance.options.APIKEY;
             }
@@ -5624,9 +5625,9 @@ let api = function Binance( options = {} ) {
              * @param {string} endpoint - the string associated with the endpoint
              * @return {undefined}
              */
-            terminate: function ( endpoint ) {
+            terminate: function ( endpoint, reconnect = false  ) {
                 if ( Binance.options.verbose ) Binance.options.log( 'WebSocket terminating:', endpoint );
-                return terminate( endpoint );
+                return terminate( endpoint, reconnect );
             },
 
             /**
