@@ -637,15 +637,17 @@ declare module "node-binance-api" {
 
         /**
         * Withdraws asset to given wallet id
-        * @param {string} asset - the asset symbol
+        * @param {string} coin - the coin symbol
+        * @param {string} network - the coin network
         * @param {string} address - the wallet to transfer it to
         * @param {number} amount - the amount to transfer
-        * @param {string} addressTag - and addtional address tag
+        * @param {long} timestamp - the timestamp
+        * @param {string} addressTag - and additional address tag
         * @param {function} callback - the callback function
         * @param {string} name - the name to save the address as. Set falsy to prevent Binance saving to address book
         * @return {promise or undefined} - omitting the callback returns a promise
         */
-        withdraw(asset: string, address: string, amount: number, addressTag?: string, callback?: _callback, name?: string): Promise<any>;
+        withdraw(coin: string, network: string, address: string, amount: number, timestamp: long, addressTag?: string, callback?: _callback, name?: string): Promise<any>;
         withdraw(...args: any): any;
 
         /**
