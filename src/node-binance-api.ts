@@ -735,6 +735,9 @@ export default class Binance {
      * @param {string} quantity - The quantity to buy or sell
      * @param {string} price - The price per unit to transact each unit at
      * @param {object} params - additional order settings
+     * @param {number} [params.quoteOrderQty] - The quote order quantity, used for MARKET orders
+     * @param {number} [params.stopPrice] - The stop price, used for STOP_LOSS, STOP_LOSS_LIMIT, TAKE_PROFIT, TAKE_PROFIT_LIMIT orders
+     * @param {number} [params.trailingDelta] - Delta price
      * @return {undefined}
      */
     async order(type: OrderType, side: OrderSide, symbol: string, quantity: number, price?: number, params: Dict = {}): Promise<Order> {
@@ -776,6 +779,13 @@ export default class Binance {
         // if (typeof params.newOrderRespType !== 'undefined') opt.newOrderRespType = params.newOrderRespType;
         if (!params.newClientOrderId) {
             request.newClientOrderId = this.SPOT_PREFIX + this.uuid22();
+        }
+
+        if (params.trailingDelta) {
+            request.trailingDelta = params.trailingDelta;
+
+            if (request.type === 'LIMIT' || request.type === 'LIMIT_MAKER' || request.type === 'MARKET') {
+                throw Error('trailingDelta: Must set "type" to one of the following: STOP_LOSS, STOP_LOSS_LIMIT, TAKE_PROFIT, TAKE_PROFIT_LIMIT');
         }
 
         /*
