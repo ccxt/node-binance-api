@@ -649,8 +649,8 @@ export default class Binance {
             if (fatalError) throw Error(`${source}: Invalid API Key!`);
             return false;
         }
-        if (!this.APISECRET) {
-            if (fatalError) throw Error(`${source}: Invalid API Secret!`);
+        if (!this.APISECRET && !this.PRIVATEKEY) {
+            if (fatalError) throw Error(`${source}: Invalid API Secret or Private Key!`);
             return false;
         }
         return true;
