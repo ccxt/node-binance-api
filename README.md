@@ -56,7 +56,7 @@ https://t.me/nodebinanceapi
 Actively maintained, typed, and safe SDK for the Binance REST APIs and Websockets. Supports ESM and CJS out of the box.
 
 ### Features
-- Spot, Margin, Futures and Delivery API
+- Spot, Margin, Futures and Delivery API (including the new algoOrder service)
 - Demo trading support
 - Testnet support (deprecated)
 - Proxy support (REST and WS)
