@@ -235,6 +235,30 @@ describe( 'Static tests', async function () {
         assert(obj.newClientOrderId.startsWith(CONTRACT_PREFIX))
     })
 
+    it( 'Futures Limit trigger Buy', async function ( ) {
+        await binance.futuresOrder('STOP', 'BUY', 'LTCUSDT', 0.5, 100, {'triggerPrice': 90} )
+        assert.isTrue( interceptedUrl.startsWith('https://fapi.binance.com/fapi/v1/algoOrder' ))
+        const obj = urlToObject( interceptedUrl.replace('https://fapi.binance.com/fapi/v1/algoOrder?', '')  )
+        assert.equal( obj.symbol, 'LTCUSDT' )
+        assert.equal( obj.side, 'BUY' )
+        assert.equal( obj.type, 'STOP' )
+        assert.equal( obj.algoType, 'CONDITIONAL')
+        assert.equal( obj.quantity, 0.5 )
+        assert(obj.clientAlgoId.startsWith(CONTRACT_PREFIX))
+    })
+
+    it( 'Futures Limit trigger Buy using dedicated endpoint', async function ( ) {
+        await binance.futuresAlgoOrder('STOP', 'BUY', 'LTCUSDT', 0.5, 100, {'triggerPrice': 90} )
+        assert.isTrue( interceptedUrl.startsWith('https://fapi.binance.com/fapi/v1/algoOrder' ))
+        const obj = urlToObject( interceptedUrl.replace('https://fapi.binance.com/fapi/v1/algoOrder?', '')  )
+        assert.equal( obj.symbol, 'LTCUSDT' )
+        assert.equal( obj.side, 'BUY' )
+        assert.equal( obj.type, 'STOP' )
+        assert.equal( obj.algoType, 'CONDITIONAL')
+        assert.equal( obj.quantity, 0.5 )
+        assert(obj.clientAlgoId.startsWith(CONTRACT_PREFIX))
+    })
+
     it( 'Futures LimitSell', async function ( ) {
         await binance.futuresOrder('LIMIT', 'SELL', 'LTCUSDT', 0.5, 100 )
         assert.isTrue( interceptedUrl.startsWith('https://fapi.binance.com/fapi/v1/order' ))
