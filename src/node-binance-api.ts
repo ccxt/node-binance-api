@@ -1187,7 +1187,68 @@ export default class Binance {
         if (!params.newClientOrderId) {
             params.newClientOrderId = this.CONTRACT_PREFIX + this.uuid22();
         }
+        // check if it is algoOrder
+        const conditionalTypes = [
+            'STOP',
+            'STOP_MARKET',
+            'TAKE_PROFIT',
+            'TAKE_PROFIT_MARKET',
+            'TRAILING_STOP_MARKET',
+        ];
+        const typeUpperCase = type.toUpperCase();
+        if (typeUpperCase && conditionalTypes.includes(typeUpperCase)) {
+            const algoPayload = { ...params };
+            if (!algoPayload.clientAlgoId) {
+                algoPayload.clientAlgoId = this.CONTRACT_PREFIX + this.uuid22();
+            }
+            delete algoPayload.newClientOrderId;
+            algoPayload.algoType = 'CONDITIONAL';
+            if (algoPayload.stopPrice && !algoPayload.triggerPrice) {
+                algoPayload.triggerPrice = algoPayload.stopPrice;
+                delete algoPayload.stopPrice;
+            }
+            return await this.privateFuturesRequest('v1/algoOrder', algoPayload, 'POST');
+        }
         return await this.privateFuturesRequest('v1/order', params, 'POST');
+    }
+
+    // Futures internal functions
+    /**
+     * @see https://developers.binance.com/docs/derivatives/usds-margined-futures/trade/rest-api/New-Algo-Order
+     * @param type
+     * @param side
+     * @param symbol symbol if the market
+     * @param quantity
+     * @param price
+     * @param params extra parameters to be sent in the request
+     * @returns
+     */
+    async futuresAlgoOrder(type: OrderType, side: string, symbol: string, quantity: number, price?: number, params: Dict = {}): Promise<FuturesOrder> {
+        params.symbol = symbol;
+        params.side = side;
+        params.type = type;
+        if (quantity) params.quantity = quantity;
+        // if in the binance futures setting Hedged mode is active, positionSide parameter is mandatory
+        if (!params.positionSide && this.Options.hedgeMode) {
+            params.positionSide = side === 'BUY' ? 'LONG' : 'SHORT';
+        }
+        // LIMIT STOP MARKET STOP_MARKET TAKE_PROFIT TAKE_PROFIT_MARKET
+        // reduceOnly stopPrice
+        if (price) {
+            params.price = price;
+        }
+        if (!params.timeInForce && (params.type.includes('LIMIT') || params.type === 'STOP' || params.type === 'TAKE_PROFIT')) {
+            params.timeInForce = 'GTX'; // Post only by default. Use GTC for limit orders.
+        }
+
+        if (!params.clientAlgoId) {
+            params.clientAlgoId = this.CONTRACT_PREFIX + this.uuid22();
+        }
+
+        if (!params.algoType) {
+            params.algoType = 'CONDITIONAL';
+        }
+        return await this.privateFuturesRequest('v1/algoOrder', params, 'POST');
     }
 
     /**
@@ -4502,37 +4563,90 @@ export default class Binance {
 
     /**
      * @see https://developers.binance.com/docs/derivatives/usds-margined-futures/trade/rest-api/Query-Order
+     * @see https://developers.binance.com/docs/derivatives/usds-margined-futures/trade/rest-api/Query-Algo-Order
      * @param symbol symbol if the market
      * @param params extra parameters to be sent in the request
+     * @param params.conditional set to true to query algo order
      * @returns
      */
     async futuresOrderStatus(symbol: string, params: Dict = {}): Promise<FuturesOrder> { // Either orderId or origClientOrderId must be sent
         params.symbol = symbol;
+        if ('conditional' in params) {
+            delete params.conditional;
+            return await this.privateFuturesRequest('v1/algoOrder', params);
+        }
         return await this.privateFuturesRequest('v1/order', params);
     }
 
     /**
+     * @see https://developers.binance.com/docs/derivatives/usds-margined-futures/trade/rest-api/Query-Algo-Order
+     * @param symbol symbol if the market
+     * @param params extra parameters to be sent in the request
+     * @returns
+     */
+    async futuresAlgoOrderStatus(symbol: string, params: Dict = {}): Promise<FuturesOrder> { // Either orderId or origClientOrderId must be sent
+        params.symbol = symbol;
+        return await this.privateFuturesRequest('v1/algoOrder', params);
+    }
+
+    /**
      * @see https://developers.binance.com/docs/derivatives/usds-margined-futures/trade/rest-api/Cancel-Order
+     * @see https://developers.binance.com/docs/derivatives/usds-margined-futures/trade/rest-api/Cancel-Algo-Order
      * @param symbol symbol if the market
      * @param orderId
+     * @param params.conditional set to true to cancel algo order
      * @param params extra parameters to be sent in the request
      * @returns
      */
     async futuresCancel(symbol: string, orderId?: number | string, params: Dict = {}): Promise<CancelOrder> { // Either orderId or origClientOrderId must be sent
         params.symbol = symbol;
+        if ('conditional' in params) {
+            delete params.conditional;
+            if (orderId) params.algoid = orderId;
+            return await this.privateFuturesRequest('v1/algoOrder', params, 'DELETE');
+        }
         if (orderId) params.orderId = orderId;
         return await this.privateFuturesRequest('v1/order', params, 'DELETE');
+    }
+
+    /**
+     * @see https://developers.binance.com/docs/derivatives/usds-margined-futures/trade/rest-api/Cancel-Algo-Order
+     * @param symbol symbol if the market
+     * @param orderId
+     * @param params extra parameters to be sent in the request
+     * @returns
+     */
+    async futuresCancelAlgoOrder(symbol: string, orderId?: number | string, params: Dict = {}): Promise<CancelOrder> { // Either orderId or origClientOrderId must be sent
+        params.symbol = symbol;
+        if (orderId) params.algoid = orderId;
+        return await this.privateFuturesRequest('v1/algoOrder', params, 'DELETE');
     }
 
     /**
      * @see https://developers.binance.com/docs/derivatives/usds-margined-futures/trade/rest-api/Cancel-All-Open-Orders
      * @param symbol symbol if the market
      * @param params extra parameters to be sent in the request
+     * @param params.conditional set to true to cancel algo order
      * @returns
      */
     async futuresCancelAll(symbol: string, params: Dict = {}): Promise<Response> {
         params.symbol = symbol;
+        if ('conditional' in params) {
+            delete params.conditional;
+            return await this.privateFuturesRequest('v1/algoOpenOrders', params, 'DELETE');
+        }
         return await this.privateFuturesRequest('v1/allOpenOrders', params, 'DELETE');
+    }
+
+    /**
+     * @see https://developers.binance.com/docs/derivatives/usds-margined-futures/trade/rest-api/Cancel-All-Algo-Open-Orders
+     * @param symbol symbol if the market
+     * @param params extra parameters to be sent in the request
+     * @returns
+     */
+    async futuresCancelAllAlgo(symbol: string, params: Dict = {}): Promise<Response> {
+        params.symbol = symbol;
+        return await this.privateFuturesRequest('v1/algoOpenOrders', params, 'DELETE');
     }
 
     /**
@@ -4552,11 +4666,27 @@ export default class Binance {
      * @see https://developers.binance.com/docs/derivatives/usds-margined-futures/trade/rest-api/Current-All-Open-Orders
      * @param symbol symbol if the market
      * @param params extra parameters to be sent in the request
+     * @param params.conditional set to true to query algo open orders
      * @returns
      */
     async futuresOpenOrders(symbol?: string, params: Dict = {}): Promise<FuturesOrder[]> {
         if (symbol) params.symbol = symbol;
+        if ('conditional' in params) {
+            delete params.conditional;
+            return await this.privateFuturesRequest('v1/algoOpenOrders', params);
+        }
         return await this.privateFuturesRequest('v1/openOrders', params);
+    }
+
+    /**
+     * @see https://developers.binance.com/docs/derivatives/usds-margined-futures/trade/rest-api/Current-All-Algo-Open-Orders
+     * @param symbol symbol if the market
+     * @param params extra parameters to be sent in the request
+     * @returns
+     */
+    async futuresOpenAlgoOrders(symbol?: string, params: Dict = {}): Promise<FuturesOrder[]> {
+        if (symbol) params.symbol = symbol;
+        return await this.privateFuturesRequest('v1/openAlgoOrders', params);
     }
 
     /**
@@ -4568,6 +4698,17 @@ export default class Binance {
     async futuresAllOrders(symbol?: string, params: Dict = {}): Promise<FuturesOrder[]> { // Get all account orders; active, canceled, or filled.
         if (symbol) params.symbol = symbol;
         return await this.privateFuturesRequest('v1/allOrders', params);
+    }
+
+    /**
+     * @see https://developers.binance.com/docs/derivatives/usds-margined-futures/trade/rest-api/Query-All-Algo-Orders
+     * @param symbol symbol if the market
+     * @param params extra parameters to be sent in the request
+     * @returns
+     */
+    async futuresAllAlgoOrders(symbol?: string, params: Dict = {}): Promise<FuturesOrder[]> { // Get all account orders; active, canceled, or filled.
+        if (symbol) params.symbol = symbol;
+        return await this.privateFuturesRequest('v1/allAlgoOrders', params);
     }
 
     /**

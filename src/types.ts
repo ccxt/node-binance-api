@@ -96,28 +96,42 @@ export interface Order {
   }
 
 export interface FuturesOrder {
-    clientOrderId: string
-    cumQty: string
-    cumQuote: string
-    executedQty: string
-    orderId: number
-    avgPrice: string
-    origQty: string
+    clientOrderId?: string
+    cumQty?: string
+    cumQuote?: string
+    executedQty?: string
+    orderId?: number
+    avgPrice?: string
+    origQty?: string
     price: string
     reduceOnly: boolean
     side: OrderSide
     positionSide: PositionSide
-    status: OrderStatus
-    stopPrice: string
-    closePosition: boolean
+    status?: OrderStatus
+    stopPrice?: string
+    closePosition?: boolean
     symbol: string
-    timeInForce: TimeInForce
-    type: OrderType
-    origType: OrderType
-    activatePrice: string
-    priceRate: string
-    updateTime: number
-    workingType: WorkingType
+    timeInForce?: TimeInForce
+    type?: OrderType
+    origType?: OrderType
+    activatePrice?: string
+    priceRate?: string
+    updateTime?: number
+    workingType?: WorkingType
+    // algo orders fields
+    algoId?: number;
+    triggerPrice?: string;
+    orderStatus?: string;
+    clientAlgoId?: string;
+    algoStatus?: string;
+    actualOrderId?: string;
+    actualPrice?: string;
+    tpTriggerPrice?: string;
+    tpPrice?: string;
+    slTriggerPrice?: string;
+    slPrice?: string;
+    tpOrderType?: string;
+    slOrderType?: string;
 }
 
 export type PositionSide = 'BOTH' | 'SHORT' | 'LONG'
