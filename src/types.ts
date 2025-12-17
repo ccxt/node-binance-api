@@ -96,28 +96,28 @@ export interface Order {
   }
 
 export interface FuturesOrder {
-    clientOrderId?: string
-    cumQty?: string
-    cumQuote?: string
-    executedQty?: string
-    orderId?: number
-    avgPrice?: string
-    origQty?: string
+    clientOrderId: string
+    cumQty: string
+    cumQuote: string
+    executedQty: string
+    orderId: number
+    avgPrice: string
+    origQty: string
     price: string
     reduceOnly: boolean
     side: OrderSide
     positionSide: PositionSide
-    status?: OrderStatus
-    stopPrice?: string
-    closePosition?: boolean
+    status: OrderStatus
+    stopPrice: string
+    closePosition: boolean
     symbol: string
-    timeInForce?: TimeInForce
-    type?: OrderType
-    origType?: OrderType
-    activatePrice?: string
-    priceRate?: string
-    updateTime?: number
-    workingType?: WorkingType
+    timeInForce: TimeInForce
+    type: OrderType
+    origType: OrderType
+    activatePrice: string
+    priceRate: string
+    updateTime: number
+    workingType: WorkingType
     // algo orders fields
     algoId?: number;
     triggerPrice?: string;
@@ -132,6 +132,46 @@ export interface FuturesOrder {
     slPrice?: string;
     tpOrderType?: string;
     slOrderType?: string;
+    algoType?: string;
+    orderType?: OrderType;
+   quantity?: string;
+   icebergQuantity?: string;
+   selfTradePreventionMode?: string;
+   priceMatch?: string;
+   priceProtect?: boolean;
+   callbackRate?: string;  //TRAILING_STOP_MARKET order
+   createTime?: number;
+   triggerTime?: number;
+   goodTillDate?: number;
+}
+
+export interface FuturesAlgoOrder {
+   algoId: number;
+   clientOrderId: string;
+   clientAlgoId: string;
+   algoType: string;
+   orderType: OrderType;
+   symbol: string;
+   side: OrderSide;
+   positionSide: PositionSide;
+   timeInForce: TimeInForce;
+   quantity: string;
+   algoStatus: string;
+   triggerPrice: string;
+   price: string;
+   icebergQuantity: string | null;
+   selfTradePreventionMode: string;
+   workingType: WorkingType;
+   priceMatch: string;
+   closePosition: boolean;
+   priceProtect: boolean;
+   reduceOnly: boolean;
+   activatePrice: string; //TRAILING_STOP_MARKET order
+   callbackRate: string;  //TRAILING_STOP_MARKET order
+   createTime: number;
+   updateTime: number;
+   triggerTime: number;
+   goodTillDate: number;
 }
 
 export type PositionSide = 'BOTH' | 'SHORT' | 'LONG'
@@ -357,6 +397,11 @@ export interface CancelOrder {
     timeInForce: string
     type: OrderType
     side: OrderSide
+}
+
+export interface CancelAlgoOrder {
+  algoId: number;
+  clientAlgoId: string;
 }
 
 export interface FuturesUserTrade {
