@@ -16,7 +16,7 @@ import nodeFetch from 'node-fetch';
 import zip from 'lodash.zipobject';
 import stringHash from 'string-hash';
 // eslint-disable-next-line
-import { Interval, PositionRisk, Order, FuturesOrder, PositionSide, WorkingType, OrderType, OrderStatus, TimeInForce, Callback, IConstructorArgs, OrderSide, FundingRate, CancelOrder, AggregatedTrade, Trade, MyTrade, WithdrawHistoryResponse, DepositHistoryResponse, DepositAddress, WithdrawResponse, Candle, FuturesCancelAllOpenOrder, OrderBook, Ticker, FuturesUserTrade, Account, FuturesAccountInfo, FuturesBalance, QueryOrder, HttpMethod, BookTicker, DailyStats, PremiumIndex, OpenInterest, IWebsocketsMethods, SymbolConfig, OCOOrder } from './types.js';
+import { Interval, PositionRisk, Order, FuturesOrder, PositionSide, WorkingType, OrderType, OrderStatus, TimeInForce, Callback, IConstructorArgs, OrderSide, FundingRate, CancelOrder, AggregatedTrade, Trade, MyTrade, WithdrawHistoryResponse, DepositHistoryResponse, DepositAddress, WithdrawResponse, Candle, FuturesCancelAllOpenOrder, OrderBook, Ticker, FuturesUserTrade, Account, FuturesAccountInfo, FuturesBalance, QueryOrder, HttpMethod, BookTicker, DailyStats, PremiumIndex, OpenInterest, IWebsocketsMethods, SymbolConfig, OCOOrder, FuturesAlgoOrder, CancelAlgoOrder } from './types.js';
 // export { Interval, PositionRisk, Order, FuturesOrder, PositionSide, WorkingType, OrderType, OrderStatus, TimeInForce, Callback, IConstructorArgs, OrderSide, FundingRate, CancelOrder, AggregatedTrade, Trade, MyTrade, WithdrawHistoryResponse, DepositHistoryResponse, DepositAddress, WithdrawResponse, Candle, FuturesCancelAllOpenOrder, OrderBook, Ticker, FuturesUserTrade, FuturesAccountInfo, FuturesBalance, QueryOrder } from './types';
 
 export interface Dictionary<T> {
@@ -1158,6 +1158,7 @@ export default class Binance {
     // Futures internal functions
     /**
      * @see https://developers.binance.com/docs/derivatives/usds-margined-futures/trade/rest-api/New-Order
+     * @see https://developers.binance.com/docs/derivatives/usds-margined-futures/trade/rest-api/New-Algo-Order
      * @param type
      * @param side
      * @param symbol symbol if the market
@@ -1223,7 +1224,7 @@ export default class Binance {
      * @param params extra parameters to be sent in the request
      * @returns
      */
-    async futuresAlgoOrder(type: OrderType, side: string, symbol: string, quantity: number, price?: number, params: Dict = {}): Promise<FuturesOrder> {
+    async futuresAlgoOrder(type: OrderType, side: string, symbol: string, quantity: number, price?: number, params: Dict = {}): Promise<FuturesAlgoOrder> {
         params.symbol = symbol;
         params.side = side;
         params.type = type;
@@ -4584,7 +4585,7 @@ export default class Binance {
      * @param params extra parameters to be sent in the request
      * @returns
      */
-    async futuresAlgoOrderStatus(symbol: string, params: Dict = {}): Promise<FuturesOrder> { // Either orderId or origClientOrderId must be sent
+    async futuresAlgoOrderStatus(symbol: string, params: Dict = {}): Promise<FuturesAlgoOrder> { // Either orderId or origClientOrderId must be sent
         params.symbol = symbol;
         return await this.privateFuturesRequest('v1/algoOrder', params);
     }
@@ -4616,7 +4617,7 @@ export default class Binance {
      * @param params extra parameters to be sent in the request
      * @returns
      */
-    async futuresCancelAlgoOrder(symbol: string, orderId?: number | string, params: Dict = {}): Promise<CancelOrder> { // Either orderId or origClientOrderId must be sent
+    async futuresCancelAlgoOrder(symbol: string, orderId?: number | string, params: Dict = {}): Promise<CancelAlgoOrder> { // Either orderId or origClientOrderId must be sent
         params.symbol = symbol;
         if (orderId) params.algoid = orderId;
         return await this.privateFuturesRequest('v1/algoOrder', params, 'DELETE');
@@ -4706,7 +4707,7 @@ export default class Binance {
      * @param params extra parameters to be sent in the request
      * @returns
      */
-    async futuresAllAlgoOrders(symbol?: string, params: Dict = {}): Promise<FuturesOrder[]> { // Get all account orders; active, canceled, or filled.
+    async futuresAllAlgoOrders(symbol?: string, params: Dict = {}): Promise<FuturesAlgoOrder[]> { // Get all account orders; active, canceled, or filled.
         if (symbol) params.symbol = symbol;
         return await this.privateFuturesRequest('v1/allAlgoOrders', params);
     }
