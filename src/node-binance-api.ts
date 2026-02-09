@@ -57,6 +57,8 @@ export default class Binance {
     combineStream = `wss://stream.binance.${this.domain}:9443/stream?streams=`;
     combineStreamTest = `wss://stream.testnet.binance.vision/stream?streams=`;
     combineStreamDemo = `wss://demo-stream.binance.com/stream?streams=`;
+    wsApi = `wss://ws-api.binance.${this.domain}:443/ws-api/v3`;
+    wsApiTest = `wss://ws-api.testnet.binance.vision/ws-api/v3`;
 
     verbose = false;
 
@@ -93,6 +95,8 @@ export default class Binance {
     headers: Dict = {};
     subscriptions: Dict = {};
     futuresSubscriptions: Dict = {};
+    wsApiConnections: Dict = {}; // WebSocket API connections
+    wsApiPendingRequests: Dict = {}; // Pending JSON-RPC requests
     futuresInfo: Dict = {};
     futuresMeta: Dict = {};
     futuresTicks: Dict = {};
@@ -277,6 +281,11 @@ export default class Binance {
         if (this.Options.demo) return this.streamDemo;
         if (this.Options.test) return this.streamTest;
         return this.stream;
+    }
+
+    getWsApiUrl() {
+        if (this.Options.test) return this.wsApiTest;
+        return this.wsApi;
     }
 
     getDStreamSingleUrl() {
@@ -1502,6 +1511,143 @@ export default class Binance {
         ws.removeAllListeners('message');
         ws.reconnect = reconnect;
         ws.terminate();
+    }
+
+    /**
+     * Connect to WebSocket API for bidirectional JSON-RPC communication
+     * @param {string} connectionId - unique identifier for this connection
+     * @param {function} messageHandler - callback for handling incoming messages/events
+     * @param {function} reconnect - reconnect callback
+     * @return {WebSocket} - WebSocket connection
+     */
+    connectWsApi(connectionId: string, messageHandler: Callback, reconnect?: Callback) {
+        const httpsproxy = this.getHttpsProxy();
+        let socksproxy = this.getSocksProxy();
+        let ws: WebSocket = undefined;
+
+        if (socksproxy) {
+            socksproxy = this.proxyReplacewithIp(socksproxy);
+            if (this.Options.verbose) this.Options.log('WebSocket API: using socks proxy server ' + socksproxy);
+            const agent = new SocksProxyAgent({
+                protocol: this.parseProxy(socksproxy)[0],
+                host: this.parseProxy(socksproxy)[1],
+                port: this.parseProxy(socksproxy)[2]
+            });
+            ws = new WebSocket(this.getWsApiUrl(), { agent: agent });
+        } else if (httpsproxy) {
+            const config = url.parse(httpsproxy);
+            const agent = new HttpsProxyAgent(config);
+            if (this.Options.verbose) this.Options.log('WebSocket API: using proxy server ' + agent);
+            ws = new WebSocket(this.getWsApiUrl(), { agent: agent });
+        } else {
+            ws = new WebSocket(this.getWsApiUrl());
+        }
+
+        if (this.Options.verbose) this.Options.log('WebSocket API: Connected to ' + this.getWsApiUrl());
+        (ws as any).reconnect = this.Options.reconnect;
+        (ws as any).connectionId = connectionId;
+        (ws as any).isAlive = false;
+
+        ws.on('open', this.handleSocketOpen.bind(this, ws, null));
+        ws.on('pong', this.handleSocketHeartbeat.bind(this, ws));
+        ws.on('error', this.handleSocketError.bind(this, ws));
+        ws.on('close', this.handleSocketClose.bind(this, ws, reconnect));
+        ws.on('message', data => {
+            try {
+                if (this.Options.verbose) this.Options.log('WebSocket API data:', data);
+                const message = JSONbig.parse(data as any);
+
+                // Handle JSON-RPC responses
+                if (message.id && this.wsApiPendingRequests[message.id]) {
+                    const pending = this.wsApiPendingRequests[message.id];
+                    delete this.wsApiPendingRequests[message.id];
+
+                    if (message.status === 200) {
+                        pending.resolve(message.result);
+                    } else {
+                        pending.reject(new Error(`WebSocket API error: ${message.error?.msg || 'Unknown error'}`));
+                    }
+                }
+                // Handle events (messages without 'id' or with 'subscriptionId')
+                else if (message.subscriptionId !== undefined || message.event) {
+                    messageHandler(message);
+                }
+            } catch (error) {
+                this.Options.log('WebSocket API: Parse error: ' + error.message);
+            }
+        });
+
+        this.wsApiConnections[connectionId] = ws;
+        return ws;
+    }
+
+    /**
+     * Send a JSON-RPC request on the WebSocket API connection
+     * @param {string} connectionId - connection identifier
+     * @param {string} method - JSON-RPC method name
+     * @param {object} params - method parameters
+     * @return {Promise} - resolves with the result or rejects with error
+     */
+    sendWsApiRequest(connectionId: string, method: string, params: any = {}): Promise<any> {
+        return new Promise((resolve, reject) => {
+            const ws = this.wsApiConnections[connectionId];
+            if (!ws || ws.readyState !== WebSocket.OPEN) {
+                reject(new Error('WebSocket API connection not open'));
+                return;
+            }
+
+            const requestId = this.generateRequestId();
+            const request = {
+                id: requestId,
+                method: method,
+                params: params
+            };
+
+            this.wsApiPendingRequests[requestId] = { resolve, reject };
+
+            if (this.Options.verbose) {
+                this.Options.log('WebSocket API: Sending request:', JSON.stringify(request));
+            }
+
+            ws.send(JSON.stringify(request), (error) => {
+                if (error) {
+                    delete this.wsApiPendingRequests[requestId];
+                    reject(error);
+                }
+            });
+
+            // Timeout after 30 seconds
+            setTimeout(() => {
+                if (this.wsApiPendingRequests[requestId]) {
+                    delete this.wsApiPendingRequests[requestId];
+                    reject(new Error('WebSocket API request timeout'));
+                }
+            }, 30000);
+        });
+    }
+
+    /**
+     * Generate a unique request ID for JSON-RPC requests
+     * @return {string} - unique request ID
+     */
+    generateRequestId(): string {
+        return `${Date.now()}-${Math.random().toString(36).substring(2, 15)}`;
+    }
+
+    /**
+     * Terminate a WebSocket API connection
+     * @param {string} connectionId - connection identifier
+     * @param {boolean} reconnect - whether to reconnect
+     * @return {undefined}
+     */
+    terminateWsApi(connectionId: string, reconnect = false) {
+        if (this.Options.verbose) this.Options.log('WebSocket API terminating:', connectionId);
+        const ws = this.wsApiConnections[connectionId];
+        if (!ws) return;
+        ws.removeAllListeners('message');
+        ws.reconnect = reconnect;
+        ws.terminate();
+        delete this.wsApiConnections[connectionId];
     }
 
     /**
@@ -2788,16 +2934,36 @@ export default class Binance {
      * @return {undefined}
      */
     userDataHandler(data: any) {
-        const type = data.e;
-        this.Options.all_updates_callback(data);
+        // Handle new WebSocket API format where events are wrapped
+        // New format: { subscriptionId: 0, event: { e: "eventType", ... } }
+        // Old format: { e: "eventType", ... }
+        let eventData = data;
+        if (data.subscriptionId !== undefined && data.event) {
+            eventData = data.event;
+        }
+
+        const type = eventData.e;
+
+        // Handle event stream termination
+        if (type === 'eventStreamTerminated') {
+            this.Options.log('User Data Stream terminated at ' + eventData.E);
+            if (this.Options.all_updates_callback) this.Options.all_updates_callback(eventData);
+            return;
+        }
+
+        if (this.Options.all_updates_callback) this.Options.all_updates_callback(eventData);
+
         if (type === 'outboundAccountInfo') {
             // XXX: Deprecated in 2020-09-08
         } else if (type === 'executionReport') {
-            if (this.Options.execution_callback) this.Options.execution_callback(data);
+            if (this.Options.execution_callback) this.Options.execution_callback(eventData);
         } else if (type === 'listStatus') {
-            if (this.Options.list_status_callback) this.Options.list_status_callback(data);
+            if (this.Options.list_status_callback) this.Options.list_status_callback(eventData);
         } else if (type === 'outboundAccountPosition' || type === 'balanceUpdate') {
-            if (this.Options.balance_callback) this.Options.balance_callback(data);
+            if (this.Options.balance_callback) this.Options.balance_callback(eventData);
+        } else if (type === 'externalLockUpdate') {
+            // Handle external lock updates (e.g., when balance is locked for margin collateral)
+            if (this.Options.balance_callback) this.Options.balance_callback(eventData);
         } else {
             this.Options.log('Unexpected userData: ' + type);
         }
@@ -2809,18 +2975,36 @@ export default class Binance {
      * @return {undefined}
      */
     userMarginDataHandler(data: any) {
-        const type = data.e;
+        // Handle new WebSocket API format where events are wrapped
+        // New format: { subscriptionId: 0, event: { e: "eventType", ... } }
+        // Old format: { e: "eventType", ... }
+        let eventData = data;
+        if (data.subscriptionId !== undefined && data.event) {
+            eventData = data.event;
+        }
 
-        if (this.Options.margin_all_updates_callback) this.Options.all_updates_callback(data);
+        const type = eventData.e;
+
+        // Handle event stream termination
+        if (type === 'eventStreamTerminated') {
+            this.Options.log('Margin Data Stream terminated at ' + eventData.E);
+            if (this.Options.margin_all_updates_callback) this.Options.margin_all_updates_callback(eventData);
+            return;
+        }
+
+        if (this.Options.margin_all_updates_callback) this.Options.margin_all_updates_callback(eventData);
 
         if (type === 'outboundAccountInfo') {
             // XXX: Deprecated in 2020-09-08
         } else if (type === 'executionReport') {
-            if (this.Options.margin_execution_callback) this.Options.margin_execution_callback(data);
+            if (this.Options.margin_execution_callback) this.Options.margin_execution_callback(eventData);
         } else if (type === 'listStatus') {
-            if (this.Options.margin_list_status_callback) this.Options.margin_list_status_callback(data);
+            if (this.Options.margin_list_status_callback) this.Options.margin_list_status_callback(eventData);
         } else if (type === 'outboundAccountPosition' || type === 'balanceUpdate') {
-            this.Options.margin_balance_callback(data);
+            if (this.Options.margin_balance_callback) this.Options.margin_balance_callback(eventData);
+        } else if (type === 'externalLockUpdate') {
+            // Handle external lock updates (e.g., when balance is locked for margin collateral)
+            if (this.Options.margin_balance_callback) this.Options.margin_balance_callback(eventData);
         }
     }
 
@@ -5819,26 +6003,42 @@ export default class Binance {
      */
     userData(all_updates_callback?: Callback, balance_callback?: Callback, execution_callback?: Callback, subscribed_callback?: Callback, list_status_callback?: Callback) {
         const reconnect = () => {
-            if (this.Options.reconnect) this.userData(all_updates_callback, balance_callback, execution_callback, subscribed_callback);
+            if (this.Options.reconnect) this.userData(all_updates_callback, balance_callback, execution_callback, subscribed_callback, list_status_callback);
         };
-        this.apiRequest(this.getSpotUrl() + 'v3/userDataStream', {}, 'POST').then((response: any) => {
-            this.Options.listenKey = response.listenKey;
-            const keepAlive = this.spotListenKeyKeepAlive;
-            const self = this;
-            setTimeout(async function userDataKeepAlive() { // keepalive
-                try {
-                    await self.apiRequest(self.getSpotUrl() + 'v3/userDataStream?listenKey=' + self.Options.listenKey, {}, 'PUT');
-                    setTimeout(userDataKeepAlive, keepAlive); // 30 minute keepalive
-                } catch (error) {
-                    setTimeout(userDataKeepAlive, 60000); // retry in 1 minute
+
+        // Set up callbacks
+        this.Options.all_updates_callback = all_updates_callback;
+        this.Options.balance_callback = balance_callback;
+        this.Options.execution_callback = execution_callback ? execution_callback : balance_callback;
+        this.Options.list_status_callback = list_status_callback;
+
+        // Connect to WebSocket API
+        const connectionId = 'userData';
+        const ws = this.connectWsApi(connectionId, this.userDataHandler.bind(this), reconnect);
+
+        ws.on('open', async () => {
+            try {
+                // Subscribe using userDataStream.subscribe.signature method
+                const timestamp = Date.now();
+                const query = `apiKey=${this.APIKEY}&timestamp=${timestamp}`;
+                const signature = this.generateSignature(query);
+
+                const result = await this.sendWsApiRequest(connectionId, 'userDataStream.subscribe.signature', {
+                    apiKey: this.APIKEY,
+                    timestamp: timestamp,
+                    signature: signature
+                });
+
+                this.Options.userDataSubscriptionId = result.subscriptionId;
+                if (this.Options.verbose) {
+                    this.Options.log(`User Data Stream subscribed with subscriptionId: ${result.subscriptionId}`);
                 }
-            }, keepAlive); // 30 minute keepalive
-            this.Options.all_updates_callback = all_updates_callback;
-            this.Options.balance_callback = balance_callback;
-            this.Options.execution_callback = execution_callback ? execution_callback : balance_callback;//This change is required to listen for Orders
-            this.Options.list_status_callback = list_status_callback;
-            const subscription = this.subscribe(this.Options.listenKey, this.userDataHandler.bind(this), reconnect) as any;
-            if (subscribed_callback) subscribed_callback(subscription.endpoint);
+
+                if (subscribed_callback) subscribed_callback(connectionId);
+            } catch (error) {
+                this.Options.log('User Data Stream subscription error:', error.message);
+                if (reconnect) setTimeout(reconnect, 5000);
+            }
         });
     }
 
@@ -5851,30 +6051,95 @@ export default class Binance {
      * @return {undefined}
      */
     userMarginData(all_updates_callback?: Callback, balance_callback?: Callback, execution_callback?: Callback, subscribed_callback?: Callback, list_status_callback?: Callback) {
+        const self = this;
         const reconnect = () => {
-            if (this.Options.reconnect) this.userMarginData(balance_callback, execution_callback, subscribed_callback);
+            if (this.Options.reconnect) this.userMarginData(all_updates_callback, balance_callback, execution_callback, subscribed_callback, list_status_callback);
         };
-        this.apiRequest(this.sapi + 'v1/userDataStream', {}, 'POST').then((response: any) => {
-            this.Options.listenMarginKey = response.listenKey;
 
-            const url = this.sapi + 'v1/userDataStream?listenKey=' + this.Options.listenMarginKey;
-            const apiRequest = this.apiRequest;
-            const keepAlive = this.spotListenKeyKeepAlive;
-            setTimeout(async function userDataKeepAlive() { // keepalive
+        // Set up callbacks
+        this.Options.margin_all_updates_callback = all_updates_callback;
+        this.Options.margin_balance_callback = balance_callback;
+        this.Options.margin_execution_callback = execution_callback;
+        this.Options.margin_list_status_callback = list_status_callback;
+
+        // Get listenToken from REST API
+        this.apiRequest(this.sapi + 'v1/userListenToken', {}, 'POST').then((response: any) => {
+            const listenToken = response.token;
+            const expirationTime = response.expirationTime;
+            this.Options.marginListenToken = listenToken;
+            this.Options.marginListenTokenExpiry = expirationTime;
+
+            if (this.Options.verbose) {
+                this.Options.log(`Margin listenToken obtained, expires at: ${new Date(expirationTime).toISOString()}`);
+            }
+
+            // Connect to WebSocket API
+            const connectionId = 'userMarginData';
+            const ws = this.connectWsApi(connectionId, this.userMarginDataHandler.bind(this), reconnect);
+
+            ws.on('open', async () => {
                 try {
-                    await apiRequest(url, {}, 'PUT');
-                    // if (err) setTimeout(userDataKeepAlive, 60000); // retry in 1 minute
-                    setTimeout(userDataKeepAlive, keepAlive); // 30 minute keepalive
+                    // Subscribe using userDataStream.subscribe.listenToken method
+                    const result = await this.sendWsApiRequest(connectionId, 'userDataStream.subscribe.listenToken', {
+                        listenToken: listenToken
+                    });
+
+                    this.Options.marginDataSubscriptionId = result.subscriptionId;
+                    const subscriptionExpiry = result.expirationTime;
+
+                    if (this.Options.verbose) {
+                        this.Options.log(`Margin Data Stream subscribed with subscriptionId: ${result.subscriptionId}`);
+                        this.Options.log(`Subscription expires at: ${new Date(subscriptionExpiry).toISOString()}`);
+                    }
+
+                    // Set up renewal before expiration (renew 5 minutes before expiry)
+                    const renewalTime = subscriptionExpiry - Date.now() - (5 * 60 * 1000);
+                    if (renewalTime > 0) {
+                        setTimeout(async function renewSubscription() {
+                            try {
+                                // Get new listenToken
+                                const renewResponse: any = await self.apiRequest(self.sapi + 'v1/userListenToken', {}, 'POST');
+                                const newListenToken = renewResponse.token;
+                                const newExpirationTime = renewResponse.expirationTime;
+
+                                if (self.Options.verbose) {
+                                    self.Options.log(`New margin listenToken obtained, expires at: ${new Date(newExpirationTime).toISOString()}`);
+                                }
+
+                                // Re-subscribe with new token
+                                const renewResult = await self.sendWsApiRequest(connectionId, 'userDataStream.subscribe.listenToken', {
+                                    listenToken: newListenToken
+                                });
+
+                                self.Options.marginDataSubscriptionId = renewResult.subscriptionId;
+                                const newSubscriptionExpiry = renewResult.expirationTime;
+
+                                if (self.Options.verbose) {
+                                    self.Options.log(`Margin Data Stream renewed with subscriptionId: ${renewResult.subscriptionId}`);
+                                }
+
+                                // Schedule next renewal
+                                const nextRenewalTime = newSubscriptionExpiry - Date.now() - (5 * 60 * 1000);
+                                if (nextRenewalTime > 0) {
+                                    setTimeout(renewSubscription, nextRenewalTime);
+                                }
+                            } catch (error) {
+                                self.Options.log('Margin Data Stream renewal error:', error.message);
+                                // Attempt to reconnect
+                                if (reconnect) setTimeout(reconnect, 5000);
+                            }
+                        }, renewalTime);
+                    }
+
+                    if (subscribed_callback) subscribed_callback(connectionId);
                 } catch (error) {
-                    setTimeout(userDataKeepAlive, 60000); // retry in 1 minute
+                    this.Options.log('Margin Data Stream subscription error:', error.message);
+                    if (reconnect) setTimeout(reconnect, 5000);
                 }
-            }, keepAlive); // 30 minute keepalive
-            this.Options.margin_all_updates_callback = all_updates_callback;
-            this.Options.margin_balance_callback = balance_callback;
-            this.Options.margin_execution_callback = execution_callback;
-            this.Options.margin_list_status_callback = list_status_callback;
-            const subscription = this.subscribe(this.Options.listenMarginKey, this.userMarginDataHandler.bind(this), reconnect) as any;
-            if (subscribed_callback) subscribed_callback(subscription.endpoint);
+            });
+        }).catch((error: any) => {
+            this.Options.log('Failed to obtain margin listenToken:', error.message);
+            if (reconnect) setTimeout(reconnect, 5000);
         });
     }
 

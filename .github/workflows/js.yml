@@ -39,6 +39,8 @@ jobs:
       run: npm run ws-tests-spot
     - name: Ws Live Tests (futures)
       run: npm run ws-tests-futures
+    - name: Ws Live Tests (api userdata)
+      run: npm run ws-api-userdata-tests
     - name: CJS test
       run: npm run test-cjs
     - name: Package test

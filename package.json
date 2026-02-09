@@ -32,6 +32,7 @@
     "ws-tests": "mocha ./tests/binance-class-ws.test.ts",
     "ws-tests-spot": "mocha ./tests/binance-ws-spot.test.ts --exit",
     "ws-tests-futures": "mocha ./tests/binance-ws-futures.test.ts --exit",
+    "ws-api-userdata-tests": "mocha ./tests/binance-ws-api-userdata.test.ts --exit",
     "test-debug": "mocha --inspect-brk",
     "lint": "eslint src/",
     "cover": "istanbul cover _mocha --report lcovonly",
