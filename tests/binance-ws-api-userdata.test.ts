@@ -510,24 +510,32 @@ describe('WebSocket API Live Tests', function () {
             let executionReceived = false;
             let balanceReceived = false;
             let subscriptionReady = false;
+            let finished = false;
+
+            const finish = (err?: Error) => {
+                if (finished) return;
+                finished = true;
+                stopWsApiConnections(true);
+                if (err) return done(err);
+                done();
+            };
+
+            const checkCompletion = () => {
+                if (executionReceived && balanceReceived && subscriptionReady) {
+                    console.log('Both execution and balance events received!');
+                    setTimeout(() => finish(), 2000);
+                }
+            };
 
             binance.websockets.userData(
                 (data) => {
                     // All updates callback
                     console.log('Event received:', data.e, data);
-
-                    // Check if we received both events
-                    if (executionReceived && balanceReceived && subscriptionReady) {
-                        console.log('✅ Both execution and balance events received!');
-                        setTimeout(() => {
-                            stopWsApiConnections(true);
-                            done();
-                        }, 2000);
-                    }
+                    checkCompletion();
                 },
                 (balance) => {
                     // Balance callback
-                    console.log('📊 Balance update received:', balance);
+                    console.log('Balance update received:', balance);
                     balanceReceived = true;
 
                     assert(balance !== null, WARN_SHOULD_BE_NOT_NULL);
@@ -548,18 +556,11 @@ describe('WebSocket API Live Tests', function () {
                         assert(Array.isArray(balance.B), 'Balances should be an array');
                     }
 
-                    // Check if both events received
-                    if (executionReceived && balanceReceived && subscriptionReady) {
-                        console.log('✅ Both execution and balance events received!');
-                        setTimeout(() => {
-                            stopWsApiConnections(true);
-                            done();
-                        }, 2000);
-                    }
+                    checkCompletion();
                 },
                 (execution) => {
                     // Execution callback
-                    console.log('📈 Execution report received:', execution);
+                    console.log('Execution report received:', execution);
                     executionReceived = true;
 
                     assert(execution !== null, WARN_SHOULD_BE_NOT_NULL);
@@ -579,14 +580,7 @@ describe('WebSocket API Live Tests', function () {
                     console.log(`  Execution Type: ${execution.x}`);
                     console.log(`  Order Status: ${execution.X}`);
 
-                    // Check if both events received
-                    if (executionReceived && balanceReceived && subscriptionReady) {
-                        console.log('✅ Both execution and balance events received!');
-                        setTimeout(() => {
-                            stopWsApiConnections(true);
-                            done();
-                        }, 2000);
-                    }
+                    checkCompletion();
                 },
                 async (endpoint) => {
                     // Subscribed callback
@@ -617,18 +611,16 @@ describe('WebSocket API Live Tests', function () {
                         // Set a backup timeout in case events are not received
                         setTimeout(() => {
                             if (!executionReceived || !balanceReceived) {
-                                console.error('⚠️ Timeout: Not all events received');
+                                console.error('Timeout: Not all events received');
                                 console.error(`  Execution received: ${executionReceived}`);
                                 console.error(`  Balance received: ${balanceReceived}`);
-                                stopWsApiConnections(true);
-                                done(new Error('Did not receive all expected events within timeout'));
+                                finish(new Error('Did not receive all expected events within timeout'));
                             }
                         }, 25000); // 25 second timeout
 
                     } catch (error: any) {
                         console.error('Error creating order:', error.message);
-                        stopWsApiConnections(true);
-                        done(error);
+                        finish(error);
                     }
                 },
                 (listStatus) => {

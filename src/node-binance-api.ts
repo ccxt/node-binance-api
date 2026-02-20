@@ -1554,11 +1554,22 @@ export default class Binance {
 
         ws.on('open', () => {
             if (this.Options.verbose) this.Options.log('WebSocket API: Connected to ' + this.getWsApiUrl());
-            this.handleSocketOpen(ws, null);
+            (ws as any).isAlive = true;
         });
-        ws.on('pong', this.handleSocketHeartbeat.bind(this, ws));
-        ws.on('error', this.handleSocketError.bind(this, ws));
-        ws.on('close', this.handleSocketClose.bind(this, ws, reconnect));
+        ws.on('pong', () => { (ws as any).isAlive = true; });
+        ws.on('error', (err) => {
+            this.Options.log('WebSocket API error: ' + (ws as any).connectionId + ' error: ' + err.message);
+        });
+        ws.on('close', (code, reason) => {
+            if (this.Options.verbose) this.Options.log('WebSocket API closed: ' + (ws as any).connectionId +
+                (code ? ' (' + code + ')' : '') +
+                (reason ? ' ' + reason : ''));
+            delete this.wsApiConnections[connectionId];
+            if ((ws as any).reconnect && typeof reconnect === 'function') {
+                if (this.Options.verbose) this.Options.log('WebSocket API reconnecting: ' + connectionId);
+                reconnect();
+            }
+        });
         ws.on('message', data => {
             try {
                 if (this.Options.verbose) this.Options.log('WebSocket API data:', data);
@@ -1659,9 +1670,10 @@ export default class Binance {
         delete this.wsApiConnections[connectionId];
 
         // Reject all pending requests for this connection
-        for (const requestId in this.wsApiPendingRequests) {
+        const pendingIds = Object.keys(this.wsApiPendingRequests);
+        for (const requestId of pendingIds) {
             const pending = this.wsApiPendingRequests[requestId];
-            if (pending.connectionId === connectionId) {
+            if (pending && pending.connectionId === connectionId) {
                 pending.reject(new Error('WebSocket API connection terminated'));
             }
         }
