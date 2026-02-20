@@ -123,7 +123,7 @@ export default class Binance {
         userDeliveryData: this.userDeliveryData.bind(this),
         subscribeCombined: this.subscribeCombined.bind(this),
         subscribe: this.subscribe.bind(this),
-        subscriptions: () => this.getSubscriptions.bind(this),
+        subscriptions: () => this.subscriptions,
         terminate: this.terminate.bind(this),
         depth: this.depthStream.bind(this),
         depthCache: this.depthCacheStream.bind(this),
@@ -151,8 +151,8 @@ export default class Binance {
         deliveryBookTicker: this.deliveryBookTickerStream.bind(this),
         deliveryChart: this.deliveryChart.bind(this),
         deliveryLiquidation: this.deliveryLiquidationStream.bind(this),
-        futuresSubcriptions: () => this.getFuturesSubscriptions.bind(this),
-        deliverySubcriptions: () => this.getDeliverySubscriptions.bind(this),
+        futuresSubcriptions: () => this.futuresSubscriptions,
+        deliverySubcriptions: () => this.deliverySubscriptions,
         futuresTerminate: this.futuresTerminate.bind(this),
         deliveryTerminate: this.deliveryTerminate.bind(this),
     };
@@ -1331,7 +1331,7 @@ export default class Binance {
     handleSocketOpen(wsBind, opened_callback: Callback) {
         wsBind.isAlive = true;
         if (Object.keys(this.subscriptions).length === 0) {
-            this.socketHeartbeatInterval = setInterval(this.socketHeartbeat, this.heartBeatInterval);
+            this.socketHeartbeatInterval = setInterval(this.socketHeartbeat.bind(this), this.heartBeatInterval);
         }
         this.subscriptions[wsBind.url] = wsBind;
         if (typeof opened_callback === 'function') opened_callback(wsBind.url);
@@ -1677,7 +1677,7 @@ export default class Binance {
     handleFuturesSocketOpen(wsBind: any, openCallback: Callback) {
         wsBind.isAlive = true;
         if (Object.keys(this.futuresSubscriptions).length === 0) {
-            this.socketHeartbeatInterval = setInterval(this.futuresSocketHeartbeat, this.heartBeatInterval);
+            this.socketHeartbeatInterval = setInterval(this.futuresSocketHeartbeat.bind(this), this.heartBeatInterval);
         }
         this.futuresSubscriptions[wsBind.url] = wsBind;
         if (typeof openCallback === 'function') openCallback(wsBind.url);
@@ -2391,7 +2391,7 @@ export default class Binance {
     handleDeliverySocketOpen(wsBind, openCallback: Callback) {
         this.isAlive = true;
         if (Object.keys(this.deliverySubscriptions).length === 0) {
-            this.socketHeartbeatInterval = setInterval(this.deliverySocketHeartbeat, 30000);
+            this.socketHeartbeatInterval = setInterval(this.deliverySocketHeartbeat.bind(this), 30000);
         }
         this.deliverySubscriptions[wsBind.url] = this;
         if (typeof openCallback === 'function') openCallback(wsBind.url);
@@ -6446,11 +6446,7 @@ export default class Binance {
                 return symbol.toLowerCase() + `@depth@100ms`;
             });
             const mapLimit = this.mapLimit.bind(this);
-            subscription = this.subscribeCombined(streams, handleDepthStreamData, reconnect, function () {
-                // async.mapLimit(symbols, 50, getSymbolDepthSnapshot, (err, results) => {
-                //     if (err) throw err;
-                //     results.forEach(updateSymbolDepthCache);
-                // });
+            subscription = this.subscribeCombined(streams, handleDepthStreamData, reconnect, () => {
                 mapLimit(symbols, 50, getSymbolDepthSnapshot)
                     .then(results => {
                         results.forEach(updateSymbolDepthCache);
@@ -6464,11 +6460,7 @@ export default class Binance {
             const symbol = symbols;
             symbolDepthInit(symbol);
             const mapLimit = this.mapLimit.bind(this);
-            subscription = this.subscribe(symbol.toLowerCase() + `@depth@100ms`, handleDepthStreamData, reconnect, function () {
-                // async.mapLimit([symbol], 1, getSymbolDepthSnapshot, (err, results) => {
-                //     if (err) throw err;
-                //     results.forEach(updateSymbolDepthCache);
-                // });
+            subscription = this.subscribe(symbol.toLowerCase() + `@depth@100ms`, handleDepthStreamData, reconnect, () => {
                 mapLimit([symbol], 1, getSymbolDepthSnapshot)
                     .then(results => {
                         results.forEach(updateSymbolDepthCache);
@@ -6476,7 +6468,6 @@ export default class Binance {
                     .catch(err => {
                         throw err;
                     });
-
             });
             assignEndpointIdToContext(symbol, subscription.endpoint);
         }
