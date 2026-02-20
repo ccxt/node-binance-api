@@ -2934,9 +2934,6 @@ export default class Binance {
      * @return {undefined}
      */
     userDataHandler(data: any) {
-        // Handle new WebSocket API format where events are wrapped
-        // New format: { subscriptionId: 0, event: { e: "eventType", ... } }
-        // Old format: { e: "eventType", ... }
         let eventData = data;
         if (data.subscriptionId !== undefined && data.event) {
             eventData = data.event;
@@ -2975,9 +2972,6 @@ export default class Binance {
      * @return {undefined}
      */
     userMarginDataHandler(data: any) {
-        // Handle new WebSocket API format where events are wrapped
-        // New format: { subscriptionId: 0, event: { e: "eventType", ... } }
-        // Old format: { e: "eventType", ... }
         let eventData = data;
         if (data.subscriptionId !== undefined && data.event) {
             eventData = data.event;
@@ -3845,6 +3839,47 @@ export default class Binance {
         if (symbol) params.symbol = symbol;
         const data = await this.publicSpotRequest('v3/ticker/price', params);
         return this.priceData(data);
+    }
+
+    /**
+    * Gets the ticker price via WebSocket API (JSON-RPC)
+    * @param {string} symbol - single symbol
+    * @param {string[]} symbols - array of symbols
+    * @param {object} options - additional options (e.g. symbolStatus)
+    * @see https://developers.binance.com/docs/binance-spot-api-docs/web-socket-api/market-data-requests#symbol-price-ticker
+    * @return {promise} - resolves with ticker price data
+    */
+    async tickerPrice(symbol?: string, symbols?: string[], options: Dict = {}): Promise<any> {
+        if (symbol && symbols) {
+            throw new Error('Cannot specify both symbol and symbols parameters');
+        }
+
+        const connectionId = 'marketData';
+        await this.ensureWsApiConnection(connectionId);
+
+        const params: Dict = { ...options };
+        if (symbol) params.symbol = symbol;
+        if (symbols) params.symbols = symbols;
+
+        return this.sendWsApiRequest(connectionId, 'ticker.price', params);
+    }
+
+    /**
+    * Ensures a WebSocket API connection is open for the given connectionId
+    * @param {string} connectionId - connection identifier
+    * @return {promise} - resolves when the connection is open
+    */
+    private ensureWsApiConnection(connectionId: string): Promise<void> {
+        return new Promise((resolve, reject) => {
+            const existing = this.wsApiConnections[connectionId];
+            if (existing && existing.readyState === WebSocket.OPEN) {
+                resolve();
+                return;
+            }
+            const ws = this.connectWsApi(connectionId, () => {}, () => {});
+            ws.on('open', () => resolve());
+            ws.on('error', (err: Error) => reject(err));
+        });
     }
 
     /**
