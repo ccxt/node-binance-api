@@ -16,7 +16,7 @@ const binance = new Binance().options({
     APIKEY: 'X4BHNSimXOK6RKs2FcKqExquJtHjMxz5hWqF0BBeVnfa5bKFMk7X0wtkfEz0cPrJ',
     APISECRET: 'x8gLihunpNq0d46F2q0TWJmeCDahX5LMXSlv3lSFNbMI3rujSOpTDKdhbcmPSf2i',
     test: true,
-    httsProxy: 'http://188.245.226.105:8911'
+    httpsProxy: 'http://188.245.226.105:8911'
 });
 
 const futuresBinance = new Binance().options({
