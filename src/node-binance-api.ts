@@ -413,23 +413,13 @@ export default class Binance {
     }
 
     async proxyRequest(opt: any) {
-        // const req = request(this.addProxy(opt), this.reqHandler(cb)).on('error', (err) => { cb(err, {}) });
-        // family: opt.family,
-        // timeout: opt.timeout,
-
         const urlBody = new URLSearchParams(opt.form);
         const reqOptions: Dict = {
             method: opt.method,
             headers: opt.headers,
-            // body: urlBody
-            // body: (opt.form)
         };
         if (opt.method !== 'GET') {
             reqOptions.body = urlBody;
-        } else {
-            if (opt.qs) {
-                // opt.url += '?' + this.makeQueryString(opt.qs);
-            }
         }
         if (this.Options.verbose) {
             this.Options.log('HTTP Request:', opt.method, opt.url, reqOptions);
@@ -451,21 +441,36 @@ export default class Binance {
             opt.url = urlProxy + opt.url;
         }
 
+        // Apply timeout via AbortController
+        const timeout = opt.timeout || this.Options.recvWindow || 30000;
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), timeout);
+        reqOptions.signal = controller.signal;
+
         let fetchImplementation = fetch;
         // require node-fetch
         if (reqOptions.agent) {
             fetchImplementation = nodeFetch;
         }
 
-        const response = await fetchImplementation(opt.url, reqOptions);
+        try {
+            const response = await fetchImplementation(opt.url, reqOptions);
+            clearTimeout(timeoutId);
 
-        await this.reqHandler(response);
-        const json = await response.json();
+            await this.reqHandler(response);
+            const json = await response.json();
 
-        if (this.Options.verbose) {
-            this.Options.log('HTTP Response:', json);
+            if (this.Options.verbose) {
+                this.Options.log('HTTP Response:', json);
+            }
+            return json;
+        } catch (error) {
+            clearTimeout(timeoutId);
+            if (error.name === 'AbortError') {
+                throw new Error(`Request timeout: ${opt.method} ${opt.url} (${timeout}ms)`);
+            }
+            throw error;
         }
-        return json;
     }
 
     reqObj(url: string, data: Dict = {}, method: HttpMethod = 'GET', key?: string) {
