@@ -9,7 +9,7 @@ const WARN_SHOULD_HAVE_KEY = 'should have key ';
 const WARN_SHOULD_NOT_HAVE_KEY = 'should not have key ';
 const WARN_SHOULD_BE_UNDEFINED = 'should be undefined';
 const WARN_SHOULD_BE_TYPE = 'should be a ';
-const TIMEOUT = 40000;
+const TIMEOUT = 90000;
 
 
 const binance = new Binance().options({
