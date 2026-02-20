@@ -323,7 +323,7 @@ describe( 'Websockets aggregated trades', function () {
     /*global beforeEach*/
     beforeEach( function ( done ) {
         this.timeout( TIMEOUT );
-        binance.websockets.aggTrades( [ 'BNBBTC', 'ETHBTC' ], e_trades => {
+        binance.websockets.aggTrades( [ 'BTCUSDT', 'ETHUSDT' ], e_trades => {
             cnt++;
             if ( cnt > 1 ) return;
             trades = e_trades;
@@ -345,7 +345,7 @@ describe( 'Websockets (raw) trades', function () {
     /*global beforeEach*/
     beforeEach( function ( done ) {
         this.timeout( TIMEOUT );
-        binance.websockets.trades( [ 'BNBBTC', 'ETHBTC' ], e_trades => {
+        binance.websockets.trades( [ 'BTCUSDT', 'ETHUSDT' ], e_trades => {
             cnt++;
             if ( cnt > 1 ) return;
             trades = e_trades;
