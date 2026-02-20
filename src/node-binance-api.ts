@@ -1543,12 +1543,14 @@ export default class Binance {
             ws = new WebSocket(this.getWsApiUrl());
         }
 
-        if (this.Options.verbose) this.Options.log('WebSocket API: Connected to ' + this.getWsApiUrl());
         (ws as any).reconnect = this.Options.reconnect;
         (ws as any).connectionId = connectionId;
         (ws as any).isAlive = false;
 
-        ws.on('open', this.handleSocketOpen.bind(this, ws, null));
+        ws.on('open', () => {
+            if (this.Options.verbose) this.Options.log('WebSocket API: Connected to ' + this.getWsApiUrl());
+            this.handleSocketOpen(ws, null);
+        });
         ws.on('pong', this.handleSocketHeartbeat.bind(this, ws));
         ws.on('error', this.handleSocketError.bind(this, ws));
         ws.on('close', this.handleSocketClose.bind(this, ws, reconnect));
@@ -1560,7 +1562,6 @@ export default class Binance {
                 // Handle JSON-RPC responses
                 if (message.id && this.wsApiPendingRequests[message.id]) {
                     const pending = this.wsApiPendingRequests[message.id];
-                    delete this.wsApiPendingRequests[message.id];
 
                     if (message.status === 200) {
                         pending.resolve(message.result);
@@ -1603,7 +1604,19 @@ export default class Binance {
                 params: params
             };
 
-            this.wsApiPendingRequests[requestId] = { resolve, reject };
+            const settle = (fn: Function, value: any) => {
+                const pending = this.wsApiPendingRequests[requestId];
+                if (!pending) return; // already settled
+                clearTimeout(pending.timer);
+                delete this.wsApiPendingRequests[requestId];
+                fn(value);
+            };
+
+            const timer = setTimeout(() => {
+                settle(reject, new Error('WebSocket API request timeout'));
+            }, 30000);
+
+            this.wsApiPendingRequests[requestId] = { resolve: (v: any) => settle(resolve, v), reject: (e: any) => settle(reject, e), timer, connectionId };
 
             if (this.Options.verbose) {
                 this.Options.log('WebSocket API: Sending request:', JSON.stringify(request));
@@ -1611,18 +1624,9 @@ export default class Binance {
 
             ws.send(JSON.stringify(request), (error) => {
                 if (error) {
-                    delete this.wsApiPendingRequests[requestId];
-                    reject(error);
+                    settle(reject, error);
                 }
             });
-
-            // Timeout after 30 seconds
-            setTimeout(() => {
-                if (this.wsApiPendingRequests[requestId]) {
-                    delete this.wsApiPendingRequests[requestId];
-                    reject(new Error('WebSocket API request timeout'));
-                }
-            }, 30000);
         });
     }
 
@@ -1648,6 +1652,14 @@ export default class Binance {
         ws.reconnect = reconnect;
         ws.terminate();
         delete this.wsApiConnections[connectionId];
+
+        // Reject all pending requests for this connection
+        for (const requestId in this.wsApiPendingRequests) {
+            const pending = this.wsApiPendingRequests[requestId];
+            if (pending.connectionId === connectionId) {
+                pending.reject(new Error('WebSocket API connection terminated'));
+            }
+        }
     }
 
     /**
@@ -3872,13 +3884,20 @@ export default class Binance {
     private ensureWsApiConnection(connectionId: string): Promise<void> {
         return new Promise((resolve, reject) => {
             const existing = this.wsApiConnections[connectionId];
-            if (existing && existing.readyState === WebSocket.OPEN) {
-                resolve();
-                return;
+            if (existing) {
+                if (existing.readyState === WebSocket.OPEN) {
+                    resolve();
+                    return;
+                }
+                if (existing.readyState === WebSocket.CONNECTING) {
+                    existing.once('open', () => resolve());
+                    existing.once('error', (err: Error) => reject(err));
+                    return;
+                }
             }
             const ws = this.connectWsApi(connectionId, () => {}, () => {});
-            ws.on('open', () => resolve());
-            ws.on('error', (err: Error) => reject(err));
+            ws.once('open', () => resolve());
+            ws.once('error', (err: Error) => reject(err));
         });
     }
 
