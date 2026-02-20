@@ -302,7 +302,7 @@ describe( 'Websockets depth', function () {
     /*global beforeEach*/
     beforeEach( function ( done ) {
         this.timeout( TIMEOUT );
-        binance.websockets.depth( [ 'BNBBTC' ], e_depth => {
+        binance.websockets.depth( [ 'BTCUSDT' ], e_depth => {
             cnt++;
             if ( cnt > 1 ) return;
             depth = e_depth;
