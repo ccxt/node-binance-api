@@ -35,11 +35,9 @@ jobs:
       run: npm run static-test
     - name: Live Tests (TS ESM)
       run: npm run ts-test-live
-    - name: Ws Live Tests (spot)
-      run: npm run ws-tests-spot
-    - name: Ws Live Tests (futures)
-      run: npm run ws-tests-futures
     - name: CJS test
       run: npm run test-cjs
     - name: Package test
       run: npm run package-test
+    - name: Ws Live Tests
+      run: npm run ws-live-tests

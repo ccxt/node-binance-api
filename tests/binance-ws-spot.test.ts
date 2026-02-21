@@ -9,14 +9,14 @@ const WARN_SHOULD_HAVE_KEY = 'should have key ';
 const WARN_SHOULD_NOT_HAVE_KEY = 'should not have key ';
 const WARN_SHOULD_BE_UNDEFINED = 'should be undefined';
 const WARN_SHOULD_BE_TYPE = 'should be a ';
-const TIMEOUT = 40000;
+const TIMEOUT = 120000;
 
 
 const binance = new Binance().options({
     APIKEY: 'X4BHNSimXOK6RKs2FcKqExquJtHjMxz5hWqF0BBeVnfa5bKFMk7X0wtkfEz0cPrJ',
     APISECRET: 'x8gLihunpNq0d46F2q0TWJmeCDahX5LMXSlv3lSFNbMI3rujSOpTDKdhbcmPSf2i',
     test: true,
-    httsProxy: 'http://188.245.226.105:8911'
+    httpsProxy: 'http://188.245.226.105:8911'
 });
 
 const futuresBinance = new Binance().options({
@@ -302,7 +302,7 @@ describe( 'Websockets depth', function () {
     /*global beforeEach*/
     beforeEach( function ( done ) {
         this.timeout( TIMEOUT );
-        binance.websockets.depth( [ 'BNBBTC' ], e_depth => {
+        binance.websockets.depth( [ 'BTCUSDT' ], e_depth => {
             cnt++;
             if ( cnt > 1 ) return;
             depth = e_depth;
@@ -323,7 +323,7 @@ describe( 'Websockets aggregated trades', function () {
     /*global beforeEach*/
     beforeEach( function ( done ) {
         this.timeout( TIMEOUT );
-        binance.websockets.aggTrades( [ 'BNBBTC', 'ETHBTC' ], e_trades => {
+        binance.websockets.aggTrades( [ 'BTCUSDT', 'ETHUSDT' ], e_trades => {
             cnt++;
             if ( cnt > 1 ) return;
             trades = e_trades;
@@ -345,7 +345,7 @@ describe( 'Websockets (raw) trades', function () {
     /*global beforeEach*/
     beforeEach( function ( done ) {
         this.timeout( TIMEOUT );
-        binance.websockets.trades( [ 'BNBBTC', 'ETHBTC' ], e_trades => {
+        binance.websockets.trades( [ 'BTCUSDT', 'ETHUSDT' ], e_trades => {
             cnt++;
             if ( cnt > 1 ) return;
             trades = e_trades;
