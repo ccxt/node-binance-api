@@ -59,7 +59,7 @@ Actively maintained, typed, and safe SDK for the Binance REST APIs and Websocket
 - Spot, Margin, Futures and Delivery API (including the new algoOrder service)
 - Demo trading support
 - Testnet support (deprecated)
-- Proxy support (REST and WS)
+- Proxy support (REST and WS, including the new WS-API)
 - Customizable HTTP headers
 - Customizable request parameters
 - RSA/ECDSA support
