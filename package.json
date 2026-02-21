@@ -1,6 +1,6 @@
 {
   "name": "node-binance-api",
-  "version": "1.0.20",
+  "version": "1.0.21",
   "description": "Binance API for node https://github.com/ccxt/node-binance-api",
   "typings": "./dist/node-binance-api.d.ts",
   "type": "module",
