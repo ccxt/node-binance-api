@@ -6018,7 +6018,7 @@ let api = function Binance(options = {}) {
                     }, reconnect);
                     // Raw stream of all listed symbols
                 } else {
-                    subscription = subscribe('!ticker@arr', function (data) {
+                    subscription = subscribe('!miniTicker@arr', function (data) {
                         if (singleCallback) {
                             prevDayStreamHandler(data, callback);
                         } else {
