@@ -6779,7 +6779,7 @@ export default class Binance {
             }, reconnect);
             // Raw stream of all listed symbols
         } else {
-            subscription = this.subscribe('!ticker@arr', function (data: any) {
+            subscription = this.subscribe('!miniTicker@arr', function (data: any) {
                 if (singleCallback) {
                     prevDayStreamHandler(data, callback);
                 } else {
