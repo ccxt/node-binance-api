@@ -152,6 +152,34 @@ describe('Private stream URL uses query params for listenKey', function () {
     });
 });
 
+describe('futuresSubscribe rejects mixed-category combined streams', function () {
+    const listenKey = 'pqia91ma19a5s61cv6a81va65sdf19v8a65a1a5s61cv6a81va65sdf19v8a1a65a1a5s61cv6a81va65sd';
+
+    it('throws when mixing market and public streams', function () {
+        assert.throws(
+            () => binance.futuresSubscribe(['btcusdt@aggTrade', 'btcusdt@depth'], () => { }),
+            /cannot combine/
+        );
+    });
+
+    it('throws when mixing public and private streams', function () {
+        assert.throws(
+            () => binance.futuresSubscribe(['btcusdt@bookTicker', listenKey], () => { }),
+            /cannot combine/
+        );
+    });
+
+    it('names both offending categories in the error message', function () {
+        try {
+            binance.futuresSubscribe(['btcusdt@markPrice', 'btcusdt@bookTicker'], () => { });
+            assert.fail('expected futuresSubscribe to throw');
+        } catch (e) {
+            assert.match(e.message, /market/);
+            assert.match(e.message, /public/);
+        }
+    });
+});
+
 describe('Live: production market stream (aggTrade via /market/)', function () {
     let trade;
     let cnt = 0;

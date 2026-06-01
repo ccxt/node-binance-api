@@ -1862,7 +1862,15 @@ export default class Binance {
         const httpsproxy = this.getHttpsProxy();
         let socksproxy = this.getSocksProxy();
         const queryParams = streams.join('/');
+        // Binance routes USDⓈ-M futures streams to separate endpoints by category
+        // (/public, /market, /private) and will not push cross-category streams on a
+        // single connection. Reject mixed-category combos so they fail loudly instead
+        // of silently dropping data — subscribe to each category on its own connection.
         const category = this.classifyFuturesStream(streams[0]);
+        const mismatch = streams.find(s => this.classifyFuturesStream(s) !== category);
+        if (mismatch) {
+            throw new Error(`futuresSubscribe: cannot combine '${category}' stream "${streams[0]}" with '${this.classifyFuturesStream(mismatch)}' stream "${mismatch}" on one connection. Binance routes futures streams to separate /public, /market and /private endpoints; subscribe to each category separately.`);
+        }
         const baseUrl = this.getFStreamUrl(category);
         let ws: any = undefined;
         if (socksproxy) {
