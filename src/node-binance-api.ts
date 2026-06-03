@@ -1868,8 +1868,9 @@ export default class Binance {
         // of silently dropping data — subscribe to each category on its own connection.
         const category = this.classifyFuturesStream(streams[0]);
         const mismatch = streams.find(s => this.classifyFuturesStream(s) !== category);
-        if (mismatch) {
-            throw new Error(`futuresSubscribe: cannot combine '${category}' stream "${streams[0]}" with '${this.classifyFuturesStream(mismatch)}' stream "${mismatch}" on one connection. Binance routes futures streams to separate /public, /market and /private endpoints; subscribe to each category separately.`);
+        if (mismatch !== undefined) {
+            const mismatchCategory = this.classifyFuturesStream(mismatch);
+            throw new Error(`futuresSubscribe: cannot combine '${category}' stream "${streams[0]}" with '${mismatchCategory}' stream "${mismatch}" on one connection. Binance routes futures streams to separate /public, /market and /private endpoints; subscribe to each category separately.`);
         }
         const baseUrl = this.getFStreamUrl(category);
         let ws: any = undefined;
