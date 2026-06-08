@@ -145,7 +145,7 @@ describe( 'Static tests', async function () {
         assert.equal( obj.orderId, '34234234')
     })
 
-    const SPOT_PREFIX = "x-B3AUXNYV"
+    const SPOT_PREFIX = "x-TKT5PX2F"
 
     it( 'MarketBuy', async function ( ) {
         await binance.marketBuy( 'LTCUSDT', 0.5 )
@@ -200,7 +200,7 @@ describe( 'Static tests', async function () {
         assert.equal( obj.symbol, 'LTCUSDT' )
     })
 
-    const CONTRACT_PREFIX = "x-ftGmvgAN"
+    const CONTRACT_PREFIX = "x-cvBPrNm9"
 
     it( 'Futures MarketBuy', async function ( ) {
         await binance.futuresMarketBuy( 'LTCUSDT', 0.5 )

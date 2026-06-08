@@ -84,8 +84,8 @@ export default class Binance {
 
     userAgent = 'Mozilla/4.0 (compatible; Node Binance API)';
     contentType = 'application/x-www-form-urlencoded';
-    SPOT_PREFIX = "x-B3AUXNYV";
-    CONTRACT_PREFIX = "x-ftGmvgAN";
+    SPOT_PREFIX = "x-TKT5PX2F";
+    CONTRACT_PREFIX = "x-cvBPrNm9";
 
     // Websockets Options
     isAlive = false;
