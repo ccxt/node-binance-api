@@ -17,6 +17,7 @@ import zip from 'lodash.zipobject';
 import stringHash from 'string-hash';
 // eslint-disable-next-line
 import { Interval, PositionRisk, Order, FuturesOrder, PositionSide, WorkingType, OrderType, OrderStatus, TimeInForce, Callback, IConstructorArgs, OrderSide, FundingRate, CancelOrder, AggregatedTrade, Trade, MyTrade, WithdrawHistoryResponse, DepositHistoryResponse, DepositAddress, WithdrawResponse, Candle, FuturesCancelAllOpenOrder, OrderBook, Ticker, FuturesUserTrade, Account, FuturesAccountInfo, FuturesBalance, QueryOrder, HttpMethod, BookTicker, DailyStats, PremiumIndex, OpenInterest, IWebsocketsMethods, SymbolConfig, OCOOrder, FuturesAlgoOrder, CancelAlgoOrder } from './types.js';
+export type * from './types.js';
 // export { Interval, PositionRisk, Order, FuturesOrder, PositionSide, WorkingType, OrderType, OrderStatus, TimeInForce, Callback, IConstructorArgs, OrderSide, FundingRate, CancelOrder, AggregatedTrade, Trade, MyTrade, WithdrawHistoryResponse, DepositHistoryResponse, DepositAddress, WithdrawResponse, Candle, FuturesCancelAllOpenOrder, OrderBook, Ticker, FuturesUserTrade, FuturesAccountInfo, FuturesBalance, QueryOrder } from './types';
 
 export interface Dictionary<T> {
@@ -59,6 +60,7 @@ export default class Binance {
     combineStreamDemo = `wss://demo-stream.binance.com/stream?streams=`;
     wsApi = `wss://ws-api.binance.${this.domain}:443/ws-api/v3`;
     wsApiTest = `wss://ws-api.testnet.binance.vision/ws-api/v3`;
+    wsApiDemo = `wss://demo-ws-api.binance.com/ws-api/v3`;
 
     verbose = false;
 
@@ -83,8 +85,8 @@ export default class Binance {
 
     userAgent = 'Mozilla/4.0 (compatible; Node Binance API)';
     contentType = 'application/x-www-form-urlencoded';
-    SPOT_PREFIX = "x-B3AUXNYV";
-    CONTRACT_PREFIX = "x-ftGmvgAN";
+    SPOT_PREFIX = "x-TKT5PX2F";
+    CONTRACT_PREFIX = "x-cvBPrNm9";
 
     // Websockets Options
     isAlive = false;
@@ -284,6 +286,7 @@ export default class Binance {
     }
 
     getWsApiUrl() {
+        if (this.Options.demo) return this.wsApiDemo;
         if (this.Options.test) return this.wsApiTest;
         return this.wsApi;
     }
@@ -294,13 +297,41 @@ export default class Binance {
         return this.dstreamSingle;
     }
 
-    getFStreamSingleUrl() {
+    /**
+     * Classify a futures stream endpoint into public, market, or private category
+     * per Binance USDⓈ-M Futures WebSocket URL split (2026-03-06)
+     */
+    classifyFuturesStream(endpoint: string): 'public' | 'market' | 'private' {
+        // Public: bookTicker and depth streams (high-frequency)
+        if (endpoint.includes('@bookTicker') || endpoint === '!bookTicker'
+            || endpoint.includes('@depth')) {
+            return 'public';
+        }
+        // Private: listenKey is a long alphanumeric string (60+ chars, no @ or !)
+        if (/^[A-Za-z0-9]{20,}$/.test(endpoint)) {
+            return 'private';
+        }
+        // Market: aggTrade, markPrice, kline, ticker, miniTicker, forceOrder, etc.
+        return 'market';
+    }
+
+    getFStreamSingleUrl(category?: 'public' | 'market' | 'private') {
+        if (category) {
+            if (this.Options.demo) return `wss://fstream.binancefuture.com/${category}/ws/`;
+            if (this.Options.test) return `wss://stream.binancefuture.${this.domain}/${category}/ws/`;
+            return `wss://fstream.binance.${this.domain}/${category}/ws/`;
+        }
         if (this.Options.demo) return this.fstreamSingleDemo;
         if (this.Options.test) return this.fstreamSingleTest;
         return this.fstreamSingle;
     }
 
-    getFStreamUrl() {
+    getFStreamUrl(category?: 'public' | 'market' | 'private') {
+        if (category) {
+            if (this.Options.demo) return `wss://fstream.binancefuture.com/${category}/stream?streams=`;
+            if (this.Options.test) return `wss://stream.binancefuture.${this.domain}/${category}/stream?streams=`;
+            return `wss://fstream.binance.${this.domain}/${category}/stream?streams=`;
+        }
         if (this.Options.demo) return this.fstreamDemo;
         if (this.Options.test) return this.fstreamTest;
         return this.fstream;
@@ -712,12 +743,10 @@ export default class Binance {
      */
     async signedRequest(url: string, data: Dict = {}, method: HttpMethod = 'GET', noDataInSignature = false) {
         this.requireApiSecret('signedRequest');
-        const isListenKeyEndpoint = url.includes('v3/userDataStream');
-
         let query = method === 'POST' && noDataInSignature ? '' : this.makeQueryString(data);
 
         let signature = undefined;
-        if (!noDataInSignature && !isListenKeyEndpoint) {
+        if (!noDataInSignature) {
             data.timestamp = new Date().getTime();
 
             if (this.timeOffset) data.timestamp += this.timeOffset;
@@ -1772,6 +1801,12 @@ export default class Binance {
         const httpsproxy = this.getHttpsProxy();
         let socksproxy = this.getSocksProxy();
         let ws: any = undefined;
+        const category = this.classifyFuturesStream(endpoint);
+        const baseUrl = this.getFStreamSingleUrl(category);
+        // Private streams use query params: ?listenKey=<key> instead of path: /<key>
+        const wsUrl = category === 'private'
+            ? baseUrl.replace(/\/$/, '') + '?listenKey=' + endpoint
+            : baseUrl + endpoint;
 
         if (socksproxy) {
             socksproxy = this.proxyReplacewithIp(socksproxy);
@@ -1781,14 +1816,14 @@ export default class Binance {
                 host: this.parseProxy(socksproxy)[1],
                 port: this.parseProxy(socksproxy)[2]
             });
-            ws = new WebSocket((this.getFStreamSingleUrl()) + endpoint, { agent });
+            ws = new WebSocket(wsUrl, { agent });
         } else if (httpsproxy) {
             const config = url.parse(httpsproxy);
             const agent = new HttpsProxyAgent(config);
             if (this.Options.verbose) this.Options.log(`futuresSubscribeSingle: using proxy server: ${agent}`);
-            ws = new WebSocket((this.getFStreamSingleUrl()) + endpoint, { agent });
+            ws = new WebSocket(wsUrl, { agent });
         } else {
-            ws = new WebSocket((this.getFStreamSingleUrl()) + endpoint);
+            ws = new WebSocket(wsUrl);
         }
 
         if (this.Options.verbose) this.Options.log('futuresSubscribeSingle: Subscribed to ' + endpoint);
@@ -1827,6 +1862,22 @@ export default class Binance {
         const httpsproxy = this.getHttpsProxy();
         let socksproxy = this.getSocksProxy();
         const queryParams = streams.join('/');
+        // Binance routes USDⓈ-M futures streams to separate endpoints by category
+        // (/public, /market, /private) and will not push cross-category streams on a
+        // single connection. Reject mixed-category combos so they fail loudly instead
+        // of silently dropping data — subscribe to each category on its own connection.
+        const category = this.classifyFuturesStream(streams[0]);
+        const mismatch = streams.find(s => this.classifyFuturesStream(s) !== category);
+        if (mismatch !== undefined) {
+            const mismatchCategory = this.classifyFuturesStream(mismatch);
+            throw new Error(`futuresSubscribe: cannot combine '${category}' stream "${streams[0]}" with '${mismatchCategory}' stream "${mismatch}" on one connection. Binance routes futures streams to separate /public, /market and /private endpoints; subscribe to each category separately.`);
+        }
+        const baseUrl = this.getFStreamUrl(category);
+        // Private combined streams use ?listenKey=<k1>&listenKey=<k2> query params
+        // instead of ?streams=<a>/<b>
+        const wsUrl = category === 'private'
+            ? baseUrl.replace(/\?streams=$/, '?') + streams.map(k => 'listenKey=' + k).join('&')
+            : baseUrl + queryParams;
         let ws: any = undefined;
         if (socksproxy) {
             socksproxy = this.proxyReplacewithIp(socksproxy);
@@ -1836,14 +1887,14 @@ export default class Binance {
                 host: this.parseProxy(socksproxy)[1],
                 port: this.parseProxy(socksproxy)[2]
             });
-            ws = new WebSocket(this.getFStreamUrl() + queryParams, { agent });
+            ws = new WebSocket(wsUrl, { agent });
         } else if (httpsproxy) {
             if (this.Options.verbose) this.Options.log(`futuresSubscribe: using proxy server ${httpsproxy}`);
             const config = url.parse(httpsproxy);
             const agent = new HttpsProxyAgent(config);
-            ws = new WebSocket(this.getFStreamUrl() + queryParams, { agent });
+            ws = new WebSocket(wsUrl, { agent });
         } else {
-            ws = new WebSocket(this.getFStreamUrl() + queryParams);
+            ws = new WebSocket(wsUrl);
         }
 
         ws.reconnect = this.Options.reconnect;
@@ -3896,9 +3947,10 @@ export default class Binance {
     /**
     * Ensures a WebSocket API connection is open for the given connectionId
     * @param {string} connectionId - connection identifier
+    * @param {function} messageHandler - handler for event messages when a new connection is created
     * @return {promise} - resolves when the connection is open
     */
-    private ensureWsApiConnection(connectionId: string): Promise<void> {
+    private ensureWsApiConnection(connectionId: string, messageHandler: Callback = () => {}): Promise<void> {
         return new Promise((resolve, reject) => {
             const existing = this.wsApiConnections[connectionId];
             if (existing) {
@@ -3912,7 +3964,7 @@ export default class Binance {
                     return;
                 }
             }
-            const ws = this.connectWsApi(connectionId, () => {}, () => {});
+            const ws = this.connectWsApi(connectionId, messageHandler, () => {});
             ws.once('open', () => resolve());
             ws.once('error', (err: Error) => reject(err));
         });
@@ -4332,20 +4384,68 @@ export default class Binance {
         return res;
     }
 
+    /**
+     * Opens the spot user data stream by subscribing over the WebSocket API.
+     * POST /api/v3/userDataStream was removed by Binance on 2026-02-20; user data
+     * streams are now started with the userDataStream.subscribe.signature WS-API method.
+     * Events are routed to the callbacks configured via userData()/Options.
+     * @return {promise} - resolves with { subscriptionId }
+     */
     async spotGetDataStream(params: Dict = {}) {
-        return await this.privateSpotRequest('v3/userDataStream', params, 'POST', true);
+        const connectionId = 'userData';
+        await this.ensureWsApiConnection(connectionId, this.userDataHandler.bind(this));
+        const timestamp = Date.now();
+        const query = `apiKey=${this.APIKEY}&timestamp=${timestamp}`;
+        const signature = this.generateSignature(query);
+        const result = await this.sendWsApiRequest(connectionId, 'userDataStream.subscribe.signature', {
+            apiKey: this.APIKEY,
+            timestamp: timestamp,
+            signature: signature,
+            ...params
+        });
+        this.Options.userDataSubscriptionId = result.subscriptionId;
+        return result;
     }
 
-    async spotKeepDataStream(listenKey: string | undefined = undefined, params: Dict = {}) {
-        listenKey = listenKey || this.Options.listenKey;
-        if (!listenKey) throw new Error('A listenKey is required, either as an argument or in this.Options.listenKey');
-        return await this.privateSpotRequest('v3/userDataStream', { listenKey, ...params }, 'PUT');
+    /**
+     * Kept for backwards compatibility: PUT /api/v3/userDataStream was removed by
+     * Binance on 2026-02-20 and WS-API subscriptions need no keepalive — they live as
+     * long as the connection. This only verifies the connection is still open.
+     */
+    async spotKeepDataStream() {
+        const ws = this.wsApiConnections['userData'];
+        if (!ws || ws.readyState !== WebSocket.OPEN) {
+            throw new Error('spotKeepDataStream: no open user data stream connection, start one with userData() or spotGetDataStream()');
+        }
+        if (this.Options.verbose) this.Options.log('spotKeepDataStream: keepalive is no longer required, WS-API subscriptions live as long as the connection');
+        return {};
     }
 
-    async spotCloseDataStream(listenKey: string | undefined = undefined, params: Dict = {}) {
-        listenKey = listenKey || this.Options.listenKey;
-        if (!listenKey) throw new Error('A listenKey is required, either as an argument or in this.Options.listenKey');
-        return await this.privateSpotRequest('v3/userDataStream', { listenKey, ...params }, 'DELETE');
+    /**
+     * Closes the spot user data stream by unsubscribing over the WebSocket API.
+     * DELETE /api/v3/userDataStream was removed by Binance on 2026-02-20; user data
+     * streams are now closed with the userDataStream.unsubscribe WS-API method.
+     * @param {number} subscriptionId - optional subscription to close; defaults to the
+     * subscription created by userData(). When neither is available, all subscriptions
+     * on the connection are closed. The WebSocket connection itself is terminated once
+     * the tracked subscription (or all subscriptions) has been closed.
+     */
+    async spotCloseDataStream(subscriptionId: number | undefined = undefined, params: Dict = {}) {
+        const connectionId = 'userData';
+        const ws = this.wsApiConnections[connectionId];
+        if (!ws || ws.readyState !== WebSocket.OPEN) {
+            throw new Error('spotCloseDataStream: no open user data stream connection, start one with userData()');
+        }
+        const tracked = this.Options.userDataSubscriptionId;
+        subscriptionId = subscriptionId ?? tracked;
+        const requestParams: Dict = { ...params };
+        if (subscriptionId !== undefined) requestParams.subscriptionId = subscriptionId;
+        const result = await this.sendWsApiRequest(connectionId, 'userDataStream.unsubscribe', requestParams);
+        if (subscriptionId === undefined || subscriptionId === tracked) {
+            this.Options.userDataSubscriptionId = undefined;
+            this.terminateWsApi(connectionId, false);
+        }
+        return result;
     }
 
     // /**

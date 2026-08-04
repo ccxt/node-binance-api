@@ -40,8 +40,8 @@ let api = function Binance(options = {}) {
     let combineStream = 'wss://stream.binance.com:9443/stream?streams=';
     const userAgent = 'Mozilla/4.0 (compatible; Node Binance API)';
     const contentType = 'application/x-www-form-urlencoded';
-    const SPOT_PREFIX = "x-HNA2TXFJ"
-    const CONTRACT_PREFIX = "x-Cb7ytekJ"
+    const SPOT_PREFIX = "x-TKT5PX2F"
+    const CONTRACT_PREFIX = "x-cvBPrNm9"
     Binance.subscriptions = {};
     Binance.futuresSubscriptions = {};
     Binance.futuresInfo = {};

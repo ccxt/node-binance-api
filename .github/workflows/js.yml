@@ -33,6 +33,8 @@ jobs:
       run: npm run ts-test-static
     - name: Static Tests (JS CJS)
       run: npm run static-test
+    - name: Futures WS endpoint migration tests
+      run: npm run ws-tests-migration
     - name: Live Tests (TS ESM)
       run: npm run ts-test-live
     - name: CJS test

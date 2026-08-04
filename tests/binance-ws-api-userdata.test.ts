@@ -460,6 +460,17 @@ describe('WebSocket API JSON-RPC', function () {
             }
         }).timeout(35000);
     });
+
+    describe('spotCloseDataStream', function () {
+        it('should reject when no user data stream connection is open', async function () {
+            try {
+                await binance.spotCloseDataStream();
+                assert.fail('Should have thrown an error');
+            } catch (error: any) {
+                assert(error.message.includes('no open user data stream connection'), 'Should indicate the connection is missing');
+            }
+        });
+    });
 });
 
 describe('WebSocket API Live Tests', function () {
@@ -502,6 +513,56 @@ describe('WebSocket API Live Tests', function () {
                     console.log('List status:', listStatus);
                 }
             );
+        });
+
+        it('should close the user data stream with spotCloseDataStream', function (done) {
+            this.timeout(TIMEOUT);
+
+            binance.websockets.userData(
+                (data) => {
+                    console.log('User data event:', data);
+                },
+                undefined,
+                undefined,
+                async (endpoint) => {
+                    try {
+                        assert((binance as any).Options.userDataSubscriptionId !== undefined, 'Should have subscription ID');
+
+                        const result = await binance.spotCloseDataStream();
+                        console.log('Unsubscribed:', result);
+
+                        assert((binance as any).Options.userDataSubscriptionId === undefined, 'Subscription ID should be cleared');
+                        assert((binance as any).wsApiConnections['userData'] === undefined, 'Connection should be removed');
+                        done();
+                    } catch (error: any) {
+                        stopWsApiConnections();
+                        done(error);
+                    }
+                }
+            );
+        });
+
+        it('should manage the stream lifecycle with spotGetDataStream/spotKeepDataStream/spotCloseDataStream', async function () {
+            this.timeout(TIMEOUT);
+
+            try {
+                const subscription = await binance.spotGetDataStream();
+                console.log('Subscribed:', subscription);
+                assert(subscription !== null, WARN_SHOULD_BE_NOT_NULL);
+                assert(subscription.subscriptionId !== undefined, WARN_SHOULD_HAVE_KEY + 'subscriptionId');
+                assert((binance as any).Options.userDataSubscriptionId === subscription.subscriptionId, 'Subscription ID should be tracked');
+
+                const keepAlive = await binance.spotKeepDataStream();
+                assert(keepAlive !== null, WARN_SHOULD_BE_NOT_NULL);
+
+                const result = await binance.spotCloseDataStream();
+                console.log('Unsubscribed:', result);
+                assert((binance as any).Options.userDataSubscriptionId === undefined, 'Subscription ID should be cleared');
+                assert((binance as any).wsApiConnections['userData'] === undefined, 'Connection should be removed');
+            } catch (error) {
+                stopWsApiConnections();
+                throw error;
+            }
         });
 
         it('should receive execution and balance events when creating a market order', function (done) {
