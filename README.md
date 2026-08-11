@@ -2173,7 +2173,7 @@ binance.setOption( 'verbose', true );
 
 ## Star History
 
-[![Star History Chart](https://api.star-history.com/svg?repos=jaggedsoft/node-binance-api&type=Timeline)](https://star-history.com/#jaggedsoft/node-binance-api&Timeline)
+[![Star History Chart](https://star-history.dera.page/svg?repos=jaggedsoft/node-binance-api&type=Timeline)](https://star-history.dera.page/#jaggedsoft/node-binance-api&Timeline)
 
 ## Contribution
 - Give us a star :star:
