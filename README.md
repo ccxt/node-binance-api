@@ -154,6 +154,17 @@ let orders = [
 console.info( await binance.futuresMultipleOrders(orders) );
 ```
 
+#### Futures Cancel Multiple Orders
+```js
+let list = [1234567,2345678]; // max length 10 
+console.info( await binance.futuresCancelMultipleOrders({symbol: 'BNBUSDT', orderIdList: list}) );
+
+  /* OR */
+
+let list = ["my_id_1","my_id_2"]; // max length 10. Encode the double quotes. No space after comma.
+console.info( await binance.futuresCancelMultipleOrders({symbol: 'BNBUSDT', origClientOrderIdList: list}) );
+```
+
 #### Futures Market Orders: Get the fill price using newOrderRespType
 ```js
 console.info( await binance.futuresMarketBuy( 'BNBUSDT', amount, { newOrderRespType: 'RESULT' } ) );
