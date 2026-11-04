@@ -42,9 +42,9 @@ export default class Binance {
     dapiDemo = `https://demo-dapi.binance.com/dapi/`;
     fstream = `wss://fstream.binance.${this.domain}/stream?streams=`;
     fstreamSingle = `wss://fstream.binance.${this.domain}/ws/`;
-    fstreamSingleTest = `wss://stream.binancefuture.${this.domain}/ws/`;
+    fstreamSingleTest = `wss://fstream.binancefuture.${this.domain}/ws/`;
     fstreamSingleDemo = `wss://fstream.binancefuture.com/ws/`;
-    fstreamTest = `wss://stream.binancefuture.${this.domain}/stream?streams=`;
+    fstreamTest = `wss://fstream.binancefuture.${this.domain}/stream?streams=`;
     fstreamDemo = `wss://fstream.binancefuture.com/stream?streams=`;
     dstream = `wss://dstream.binance.${this.domain}/stream?streams=`;
     dstreamSingle = `wss://dstream.binance.${this.domain}/ws/`;
@@ -3150,7 +3150,7 @@ export default class Binance {
             amount,
             type,
         });
-        return await this.privateSpotRequest("v1/asset/transfer",
+        return await this.privateSapiRequest("v1/asset/transfer",
             parameters,
             "POST"
         );
@@ -3173,7 +3173,7 @@ export default class Binance {
             amount,
             type,
         });
-        return await this.privateSpotRequest("v1/futures/transfer",
+        return await this.privateSapiRequest("v1/futures/transfer",
             parameters,
             "POST"
         );
@@ -4029,15 +4029,15 @@ export default class Binance {
     * @return {promise or undefined} - omitting the callback returns a promise
     */
     async dustLog() {
-        return await this.privateSpotRequest('v1/asset/dribblet', {});
+        return await this.privateSapiRequest('v1/asset/dribblet', {});
     }
 
     async dustTransfer(assets) {
-        return await this.privateSpotRequest('v1/asset/dust', { asset: assets }, 'POST');
+        return await this.privateSapiRequest('v1/asset/dust', { asset: assets }, 'POST');
     }
 
     async assetDividendRecord(params: Dict = {}) {
-        return await this.privateSpotRequest('v1/asset/assetDividend', params);
+        return await this.privateSapiRequest('v1/asset/assetDividend', params);
     }
 
     /**
@@ -4078,7 +4078,7 @@ export default class Binance {
     */
     async withdrawHistory(params: Dict = {}): Promise<WithdrawHistoryResponse> {
         if (typeof params === 'string') params = { asset: params };
-        return await this.privateSpotRequest('v1/capital/withdraw/history', params);
+        return await this.privateSapiRequest('v1/capital/withdraw/history', params);
     }
 
     /**
@@ -4089,7 +4089,7 @@ export default class Binance {
     */
     async depositHistory(asset?: string, params: Dict = {}): Promise<DepositHistoryResponse> {
         if (asset) params = { asset: asset };
-        return await this.privateSpotRequest('v1/capital/deposit/hisrec', params);
+        return await this.privateSapiRequest('v1/capital/deposit/hisrec', params);
     }
 
     /**
@@ -4099,7 +4099,7 @@ export default class Binance {
     * @return {promise or undefined} - omitting the callback returns a promise
     */
     async depositAddress(asset: string, params: Dict = {}): Promise<DepositAddress> {
-        return await this.privateSpotRequest('v1/capital/deposit/address', this.extend({ coin: asset }, params));
+        return await this.privateSapiRequest('v1/capital/deposit/address', this.extend({ coin: asset }, params));
     }
 
     /**
@@ -4109,23 +4109,23 @@ export default class Binance {
     * @return {promise or undefined} - omitting the callback returns a promise
     */
     async depositAddressList(asset: string, params: Dict = {}) {
-        return await this.privateSpotRequest('v1/capital/deposit/address/list', this.extend({ coin: asset }, params));
+        return await this.privateSapiRequest('v1/capital/deposit/address/list', this.extend({ coin: asset }, params));
     }
 
     /**
     * Get the account status
-    * @see https://developers.binance.com/docs/binance-spot-api-docs/rest-api/account-endpoints#account-information-user_data
+    * @see https://developers.binance.com/docs/wallet/account/account-status
     * @return {promise or undefined} - omitting the callback returns a promise
     */
     async accountStatus(params: Dict = {}) {
-        return await this.privateSpotRequest('v3/account', params);
+        return await this.privateSapiRequest('v1/account/status', params);
     }
 
     /**
     * @return {promise or undefined} - omitting the callback returns a promise
     */
     async apiPermission(params: Dict = {}) {
-        return await this.privateSpotRequest('v1/account/apiRestrictions', params);
+        return await this.privateSapiRequest('v1/account/apiRestrictions', params);
     }
 
     /**
@@ -4145,7 +4145,7 @@ export default class Binance {
     * @return {promise or undefined} - omitting the callback returns a promise
     */
     async assetDetail(params: Dict = {}) {
-        return await this.privateSpotRequest('asset/assetDetail', params);
+        return await this.privateSapiRequest('v1/asset/assetDetail', params);
     }
 
     /**
@@ -4527,10 +4527,11 @@ export default class Binance {
 
     /**
     * Get the account binance lending information
+    * @deprecated Binance Savings was replaced by Simple Earn; the lending/union/account endpoint may be decommissioned upstream
     * @return {promise or undefined} - omitting the callback returns a promise
     */
     async lending(params: Dict = {}) {
-        return await this.privateSpotRequest('v1/lending/union/account', params);
+        return await this.privateSapiRequest('v1/lending/union/account', params);
     }
 
     //** Futures methods */
@@ -4629,7 +4630,9 @@ export default class Binance {
      */
     async futuresHistoricalTrades(symbol: string, params: Dict = {}): Promise<Trade[]> {
         params.symbol = symbol;
-        return await this.publicFuturesRequest('v1/historicalTrades', params);
+        // this endpoint requires the X-MBX-APIKEY header (MARKET_DATA permission), without a signature
+        const query = this.makeQueryString(params);
+        return await this.apiRequest(this.getFapiUrl() + 'v1/historicalTrades' + (query ? '?' + query : ''));
     }
 
     /**
@@ -5029,7 +5032,7 @@ export default class Binance {
         if (symbol) params.symbol = symbol;
         if ('conditional' in params) {
             delete params.conditional;
-            return await this.privateFuturesRequest('v1/algoOpenOrders', params);
+            return await this.privateFuturesRequest('v1/openAlgoOrders', params);
         }
         return await this.privateFuturesRequest('v1/openOrders', params);
     }
@@ -5095,18 +5098,30 @@ export default class Binance {
      */
     async futuresTransferAsset(asset: string, amount: number, type: string, params: Dict = {}) {
         params = Object.assign({ asset, amount, type });
-        return await this.privateSpotRequest('v1/futures/transfer', params, 'POST');
+        return await this.privateSapiRequest('v1/futures/transfer', params, 'POST');
     }
 
     /**
      * @see https://developers.binance.com/docs/derivatives/futures-data/market-data
+     * @deprecated the futuresHistDataId endpoint was removed by Binance; kept for backwards compatibility only
      * @param symbol
      * @param params
      * @returns
      */
     async futuresHistDataLink(symbol?: string, params: Dict = {}) {
         if (symbol) params.symbol = symbol;
-        return await this.privateSpotRequest('v1/futuresHistDataId', params);
+        return await this.privateSapiRequest('v1/futuresHistDataId', params);
+    }
+
+    /**
+     * Request a trade history download id, to be used with futuresTradeDownloadLink
+     * @see https://developers.binance.com/docs/derivatives/usds-margined-futures/account/rest-api/Get-Download-Id-For-Futures-Trade-History
+     * @param startTime - timestamp in ms
+     * @param endTime - timestamp in ms
+     * @returns
+     */
+    async futuresTradeDownloadId(startTime: number, endTime: number, params: Dict = {}) {
+        return await this.privateFuturesRequest('v1/trade/asyn', this.extend({ startTime, endTime }, params));
     }
 
     /**
@@ -5237,7 +5252,9 @@ export default class Binance {
 
     async deliveryHistoricalTrades(symbol: string, params: Dict = {}) {
         params.symbol = symbol;
-        return await this.publicDeliveryRequest('v1/historicalTrades', params);
+        // this endpoint requires the X-MBX-APIKEY header (MARKET_DATA permission), without a signature
+        const query = this.makeQueryString(params);
+        return await this.apiRequest(this.getDapiUrl() + 'v1/historicalTrades' + (query ? '?' + query : ''));
     }
 
     async deliveryAggTrades(symbol: string, params: Dict = {}) {
@@ -5268,9 +5285,14 @@ export default class Binance {
         return await this.privateDeliveryRequest('v1/listenKey', params, 'DELETE');
     }
 
+    /**
+     * Get the user's force (liquidation) orders. GET /dapi/v1/allForceOrders was removed by
+     * Binance; the private forceOrders endpoint returns the account's own liquidation orders.
+     * @see https://developers.binance.com/docs/derivatives/coin-margined-futures/trade/rest-api/Users-Force-Orders
+     */
     async deliveryLiquidationOrders(symbol?: string, params: Dict = {}) {
         if (symbol) params.symbol = symbol;
-        return await this.publicDeliveryRequest('v1/allForceOrders', params);
+        return await this.privateDeliveryRequest('v1/forceOrders', params);
     }
 
     async deliveryPositionRisk(params: Dict = {}) {
@@ -5541,8 +5563,9 @@ export default class Binance {
      * @return {undefined}
      */
     async mgTransferMainToMargin(asset: string, amount: number, params: Dict = {}) {
-        params = this.extend({ asset: asset, amount: amount, type: 1 }, params);
-        return await this.privateSapiRequest('v1/margin/transfer', params, 'POST');
+        // POST /sapi/v1/margin/transfer was decommissioned by Binance; use the universal transfer endpoint
+        params = this.extend({ asset: asset, amount: amount, type: 'MAIN_MARGIN' }, params);
+        return await this.privateSapiRequest('v1/asset/transfer', params, 'POST');
     }
 
     /**
@@ -5552,8 +5575,9 @@ export default class Binance {
      * @return {undefined}
      */
     async mgTransferMarginToMain(asset: string, amount: number, params: Dict = {}) {
-        const parameters = Object.assign({ asset: asset, amount: amount, type: 2 });
-        return await this.privateSapiRequest('v1/margin/transfer', this.extend(parameters, params), 'POST');
+        // POST /sapi/v1/margin/transfer was decommissioned by Binance; use the universal transfer endpoint
+        const parameters = Object.assign({ asset: asset, amount: amount, type: 'MARGIN_MAIN' });
+        return await this.privateSapiRequest('v1/asset/transfer', this.extend(parameters, params), 'POST');
     }
     // /**
     // * Universal Transfer requires API permissions enabled
@@ -5627,7 +5651,7 @@ export default class Binance {
      * @return {undefined}
      */
     async maxTransferable(asset: string) {
-        return await this.privateSpotRequest('v1/margin/maxTransferable', { asset: asset });
+        return await this.privateSapiRequest('v1/margin/maxTransferable', { asset: asset });
     }
 
     /**
@@ -5645,7 +5669,8 @@ export default class Binance {
             isIsolated,
             symbol
         } : {};
-        return await this.privateSapiRequest('v1/margin/loan', this.extend({ ...parameters, ...isolatedObj }, params), 'POST');
+        // POST /sapi/v1/margin/loan was decommissioned by Binance; borrow-repay replaces it
+        return await this.privateSapiRequest('v1/margin/borrow-repay', this.extend({ ...parameters, ...isolatedObj, type: 'BORROW' }, params), 'POST');
     }
 
     /**
@@ -5655,8 +5680,9 @@ export default class Binance {
      * @return {undefined}
      */
     async mgQueryLoan(asset: string, options) {
-        const parameters = Object.assign({ asset: asset }, options);
-        return await this.privateSapiRequest('v1/margin/loan', { ...parameters }, 'GET');
+        // GET /sapi/v1/margin/loan was decommissioned by Binance; borrow-repay replaces it
+        const parameters = Object.assign({ asset: asset, type: 'BORROW' }, options);
+        return await this.privateSapiRequest('v1/margin/borrow-repay', { ...parameters }, 'GET');
     }
 
     /**
@@ -5666,8 +5692,9 @@ export default class Binance {
      * @return {undefined}
      */
     async mgQueryRepay(asset: string, params: Dict = {}) {
-        const parameters = Object.assign({ asset: asset }, params);
-        return await this.privateSapiRequest('v1/margin/repay', { ...parameters }, 'GET');
+        // GET /sapi/v1/margin/repay was decommissioned by Binance; borrow-repay replaces it
+        const parameters = Object.assign({ asset: asset, type: 'REPAY' }, params);
+        return await this.privateSapiRequest('v1/margin/borrow-repay', { ...parameters }, 'GET');
     }
 
     /**
@@ -5685,7 +5712,8 @@ export default class Binance {
             isIsolated,
             symbol
         } : {};
-        return await this.privateSapiRequest('v1/margin/repay', this.extend({ ...parameters, ...isolatedObj }, params), 'POST');
+        // POST /sapi/v1/margin/repay was decommissioned by Binance; borrow-repay replaces it
+        return await this.privateSapiRequest('v1/margin/borrow-repay', this.extend({ ...parameters, ...isolatedObj, type: 'REPAY' }, params), 'POST');
     }
 
     /**
@@ -5694,8 +5722,7 @@ export default class Binance {
      * @return {undefined}
      */
     async mgAccount(isIsolated = false, params: Dict = {}) {
-        let endpoint = 'v1/margin';
-        endpoint += (isIsolated) ? '/isolated' : '' + '/account';
+        const endpoint = (isIsolated) ? 'v1/margin/isolated/account' : 'v1/margin/account';
         return await this.privateSapiRequest(endpoint, params);
     }
     /**
