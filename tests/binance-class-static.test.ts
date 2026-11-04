@@ -19,16 +19,19 @@ describe( 'Static tests', async function () {
 
     let interceptedUrl = null;
     let interceptedBody = null;
+    let interceptedHeaders = null;
 
     beforeEach(() => {
 
         interceptedUrl = null;
         interceptedBody = null;
+        interceptedHeaders = null;
         nock(/.*/)
             .get(/.*/)
             .reply(200, function (uri, requestBody) {
                 interceptedUrl =  `${this.req.options.proto}://${this.req.options.hostname}${uri}`;
                 interceptedBody = requestBody; // Capture the request body
+                interceptedHeaders = this.req.headers;
                 return { success: true };
             });
         nock(/.*/)
@@ -36,6 +39,7 @@ describe( 'Static tests', async function () {
             .reply(200, function (uri, requestBody) {
                 interceptedUrl =  `${this.req.options.proto}://${this.req.options.hostname}${uri}`;
                 interceptedBody = requestBody; // Capture the request body
+                interceptedHeaders = this.req.headers;
                 return { success: true };
             });
         nock(/.*/)
@@ -43,6 +47,7 @@ describe( 'Static tests', async function () {
             .reply(200, function (uri, requestBody) {
                 interceptedUrl =  `${this.req.options.proto}://${this.req.options.hostname}${uri}`;
                 interceptedBody = requestBody; // Capture the request body
+                interceptedHeaders = this.req.headers;
                 return { success: true };
             });
     });
@@ -344,6 +349,48 @@ describe( 'Static tests', async function () {
         assert.equal( obj.type, 'MARKET' )
         assert.equal( obj.quantity, 0.1 )
         assert(obj.newClientOrderId.startsWith(CONTRACT_PREFIX))
+    })
+
+    it( 'futures historicalTrades sends API key header', async function ( ) {
+        await binance.futuresHistoricalTrades( 'BTCUSDT' )
+        assert.equal( interceptedUrl, 'https://fapi.binance.com/fapi/v1/historicalTrades?symbol=BTCUSDT' )
+        assert.equal( interceptedHeaders['x-mbx-apikey'], 'XXXXXXXXXXXXXXXXXXXXXXX' )
+    })
+
+    it( 'delivery historicalTrades sends API key header', async function ( ) {
+        await binance.deliveryHistoricalTrades( 'BTCUSD_PERP' )
+        assert.equal( interceptedUrl, 'https://dapi.binance.com/dapi/v1/historicalTrades?symbol=BTCUSD_PERP' )
+        assert.equal( interceptedHeaders['x-mbx-apikey'], 'XXXXXXXXXXXXXXXXXXXXXXX' )
+    })
+
+    it( 'futures open orders conditional uses openAlgoOrders', async function ( ) {
+        await binance.futuresOpenOrders( undefined, { conditional: true } )
+        assert.isTrue( interceptedUrl.startsWith('https://fapi.binance.com/fapi/v1/openAlgoOrders?' ))
+    })
+
+    it( 'futures open algo orders', async function ( ) {
+        await binance.futuresOpenAlgoOrders( 'BTCUSDT' )
+        assert.isTrue( interceptedUrl.startsWith('https://fapi.binance.com/fapi/v1/openAlgoOrders?symbol=BTCUSDT' ))
+    })
+
+    it( 'delivery liquidation orders use private forceOrders', async function ( ) {
+        await binance.deliveryLiquidationOrders( 'BTCUSD_PERP' )
+        assert.isTrue( interceptedUrl.startsWith('https://dapi.binance.com/dapi/v1/forceOrders' ))
+        const obj = urlToObject( interceptedUrl.replace('https://dapi.binance.com/dapi/v1/forceOrders?', '') )
+        assert.equal( obj.symbol, 'BTCUSD_PERP' )
+    })
+
+    it( 'futures trade download id', async function ( ) {
+        await binance.futuresTradeDownloadId( 1000, 2000 )
+        assert.isTrue( interceptedUrl.startsWith('https://fapi.binance.com/fapi/v1/trade/asyn?' ))
+        const obj = urlToObject( interceptedUrl.replace('https://fapi.binance.com/fapi/v1/trade/asyn?', '') )
+        assert.equal( obj.startTime, '1000' )
+        assert.equal( obj.endTime, '2000' )
+    })
+
+    it( 'futures testnet stream hosts', async function ( ) {
+        assert.equal( binance.fstreamSingleTest, 'wss://fstream.binancefuture.com/ws/' )
+        assert.equal( binance.fstreamTest, 'wss://fstream.binancefuture.com/stream?streams=' )
     })
 
 })
