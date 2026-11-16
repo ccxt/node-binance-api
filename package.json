@@ -6,8 +6,14 @@
   "type": "module",
   "exports": {
     ".": {
-      "import": "./dist/node-binance-api.js",
-      "require": "./dist/cjs/node-binance-api.cjs"
+      "import": {
+        "types": "./dist/node-binance-api.d.ts",
+        "default": "./dist/node-binance-api.js"
+      },
+      "require": {
+        "types": "./dist/cjs/node-binance-api.d.cts",
+        "default": "./dist/cjs/node-binance-api.cjs"
+      }
     }
   },
   "dependencies": {
@@ -22,7 +28,7 @@
     "@types/ws": "^8.18.0"
   },
   "scripts": {
-    "build": "tsc && npm run bundle-cjs",
+    "build": "tsc && npm run bundle-cjs && npm run bundle-cjs-types",
     "test": "mocha ./tests/live-tests.cjs",
     "static-test": "mocha ./tests/static-tests.mjs",
     "ts-test-live": "mocha ./tests/binance-class-live.test.ts",
@@ -42,7 +48,9 @@
     "codacy": "cat ./coverage/lcov.info | codacy-coverage -v",
     "codecov": "codecov",
     "bundle-cjs": "mkdir -p dist/cjs && rollup -c rollup.config.js",
+    "bundle-cjs-types": "node ./scripts/generate-cjs-types.mjs",
     "package-test": "./tests/package.sh",
+    "package-types-test": "./tests/package-types.sh",
     "publishPackage": "npm run build && sh publish.sh && git push && git push --tags && npm publish",
     "rollup-plugin-execute": "^1.1.1"
   },
