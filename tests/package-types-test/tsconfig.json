@@ -1,0 +1,11 @@
+{
+  "compilerOptions": {
+    "module": "nodenext",
+    "moduleResolution": "nodenext",
+    "target": "ES2022",
+    "strict": true,
+    "noEmit": true,
+    "types": []
+  },
+  "files": ["cjs-require.cts", "cjs-default-import.cts", "esm-import.mts"]
+}
