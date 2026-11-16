@@ -27,6 +27,8 @@ jobs:
       run: npm run lint
     - name: Build
       run: npm run build
+    - name: Package types test
+      run: npm run package-types-test
     - name: Crypto Tests
       run: npm run crypto-tests
     - name: Static Tests (TS ESM)
@@ -41,7 +43,5 @@ jobs:
       run: npm run test-cjs
     - name: Package test
       run: npm run package-test
-    - name: Package types test
-      run: npm run package-types-test
     - name: Ws Live Tests
       run: npm run ws-live-tests
